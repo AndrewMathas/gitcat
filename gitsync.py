@@ -14,11 +14,15 @@ import os
 import subprocess
 import sys
 
+from pathlib import Path
+
 # ---------------------------------------------------------------------------------------
 PROLOG=r'''# List of git repositories to sync using gitsync'''
 
 class Catalogue(dict):
     r"""
+    Usage: Catalogue(filename)
+
     A class for reading, accessing and storing details of the different git
     repositories. These are stored in `filename` in the form:
 
@@ -27,20 +31,12 @@ class Catalogue(dict):
        ...
 
     a file. Any lines without a key-value pair are ignored.
-
-    The key-value pairs are available as both attributes and items
-
-    Usage: MetaData(filename)
     """
     def __init__(self, filename):
         super().__init__()
         dict.__init__(self)
         self.filename = filename
-        self.prolog=''
-        self.repositories = dict()
         self.catalogue = {}
-        repository = None
-        lineNum = 0
         self.read_catalogue()
 
     def __getitem__(self, key):
@@ -51,18 +47,6 @@ class Catalogue(dict):
             return self.catalogue[key]
         else:
             return dict.__getitem__(key)
-
-    def __setitem__(self, key, value):
-        r'''
-        Override setitem so that it looks in the catalogue dictionary
-        '''
-        self.catalogue[key] = value
-
-    def __getattr__(self, name):
-        if key in self.catalogue:
-            return self.catalogue[key]
-        else:
-            raise ValueError('Unknown key {}'.format(key))
 
     def add_repository(self):
         r'''
@@ -79,13 +63,17 @@ class Catalogue(dict):
         if len(dir)>0 and len(rep)>0:
             if rep in self.catalogue:
                 # give an error if repository is already in the catalogue
-                raise ValueError('The current repository {} is already n thng synced'.format(dir))
+                raise ValueError('The current repository {} is already being synced'.format(dir))
             else:
                 # add to the repository and save
                 self.catalogue[dir] = rep
                 self.save_catalogue()
+        elif len(dir)>0:
+            raise ValueError('Unable to get remote repository details for the repository in {}'.format(dir))
+        elif len(rep)>0:
+            raise ValueError('Unable to get root directory for the repository {}'.format(rep))
         else:
-            raise ValueError('Not a valid git repository?'.format(entry))
+            raise ValueError('Unable to get any repository details')
 
     def read_catalogue(self):
         r'''
@@ -113,10 +101,10 @@ class Catalogue(dict):
         r'''
         Remove the directory `dir` from the catalogue of repositories rto sync
         '''
-        if rdir in self.catalogue:
-            del self.catalogue[dir]
-        else:
+        if dir not in self.catalogue:
             raise ValueError('Unknown repository {}'.format(dir))
+
+        del self.catalogue[dir]
         self.save_catalogue()
 
     def save_catalogue(self):
@@ -126,11 +114,13 @@ class Catalogue(dict):
             catalogue.write(PROLOG+'\n')
             catalogue.write('\n'.join(
                 ['{dir:<{max}} = {rep}'.format(dir=dir, rep=self.catalogue[rep], max=max)]
+                )
             )
 
 
 # ---------------------------------------------------------------------------------------
-class bitbucket_sync(object):
+
+class GitSync:
 
     def __init__(self, options):
         self.catalogue = Catalogue( self.catalogue )
@@ -185,17 +175,18 @@ class bitbucket_sync(object):
         Run through all repositories and update them if their directories
         already exist on this computer or if `install==True`
         '''
-        for repository in self.catalogue:
-            for rep in self.catalogue[repository]:
-            if not self.directory_exists(self.catalogue[repository]) and install:
-                self.mkdir( self.catalogue[repository])
+        for rep in self.catalogue:
+            dir = os.join(self.prefix, rep)
+            if self.directory_exists(dir):
+                self.chdir(dir)
+                self.run('git pull')
 
-            if self.directory_exists(self.catalogue[repository]):
-                self.chdir( self.catalogue[repository])
-                if not self.directory_exists(self.catalogue[repository]+'/.git'):
-                    self.run('git clone https://{0.host}/{0.rep}.git {0.dir}'.format(rep))
-                else:
-                    self.run('git pull')
+            elif install:
+                os.chdir(Path(dir).resolve().parent)
+                self.run('git clone {rep} {dir}'.format(dir=rep, rep=self.catalogue[rep]))
+
+            else:
+                self.message('')
 
 # ---------------------------------------------------------------------------------------
 if __name__ == '__main__':
@@ -229,6 +220,6 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(1)
 
-    bitbucket_sync(options)
+    GitSync(options)
 
 
