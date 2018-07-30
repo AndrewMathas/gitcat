@@ -15,17 +15,18 @@ import subprocess
 import sys
 
 # ---------------------------------------------------------------------------------------
+PROLOG=r'''# List of git repositories to sync using gitsync'''
+
 class Catalogue(dict):
     r"""
     A class for reading, accessing and storing details of the different git
     repositories. These are stored in `filename` in the form:
 
-       rep1 = host1:repository1:directory1
-       rep2 = host2:repository2:directory2
+       directory1 = repository1
+       directory2 = repository2
        ...
 
-    a file. Any internal spaces in the key name are replaced with underscores
-    and lines without a key-value pair are ignored.
+    a file. Any lines without a key-value pair are ignored.
 
     The key-value pairs are available as both attributes and items
 
@@ -63,61 +64,69 @@ class Catalogue(dict):
         else:
             raise ValueError('Unknown key {}'.format(key))
 
-    def add_repository(self, repository, entry):
+    def add_repository(self):
         r'''
-        Add an `entry` of the form 'key = value' to the catalogue dictionary
+        Add the current repository to the catalogue
         '''
-        if '=' in entry:
-            rep, dir = entry.split('=')
-            rep = rep.lower().replace('-',' ').replace('  ',' ')
-            if len(key)>0:
-                if rep in self.catalogue[repository]:
-                    # give an error if entry does ot match what we have already
-                    if self.calogue[repository][rep] != dir:
-                        raise ValueError('Repository {} is already catalogued but with rep={}, and dir={}'.format(
-                                         self.catalogue[key]['rep'], self.catalogue[key]['dir']))
-                else:
-                    self.catalogue[repository][key] = dir
+        try:
+            # find the root directory for the repository and the remote URL`
+            dir = subprocess.check_output('git root', shell=True)
+            rep = subprocess.check_output('git remote get-url --push origin', shell=True)
+
+        except subprocess.CalledProcessError:
+            raise ValueError('Error: Not a git repository')
+
+        if len(dir)>0 and len(rep)>0:
+            if rep in self.catalogue:
+                # give an error if repository is already in the catalogue
+                raise ValueError('The current repository {} is already n thng synced'.format(dir))
+            else:
+                # add to the repository and save
+                self.catalogue[dir] = rep
+                self.save_catalogue()
         else:
-            raise ValueError('{} has no repository-directory pair'.format(entry))
+            raise ValueError('Not a valid git repository?'.format(entry))
 
     def read_catalogue(self):
         r'''
         Read the catalogue of git repositories to sync. These are stored in the
         form:
-           rep1 = host1:repository1:directory1
-           rep2 = host2:repository2:directory2
+
+           directory1 = repository1
+           directory2 = repository2
            ...
-        and then put into
+
+        and then put into the dictionary self.catalogue with the directory as
+        the key. Any lines that do not contain an equal sign are ignored.
         '''
         with open(self.filename, 'r') as catalogue:
             for line in catalogue:
-                lineNum += 1
-                if line[0] == '#':
-                    self.prolog += line
-                elif '=' in line:
+                if '=' in line:
+                    dir, rep = line.split('=')
+                    dir = dir.strip()
+                    if dir in self.catalogue:
+                        raise ValueError('{} appears in the catalogue more than once!;'.format(dir))
+                    else:
+                        self.catalogue[dir] = rep.strip()
 
-                    self.add_repository(respository, line)
-                elif len(line.strip())>0:
-                    raise ValueError('Syntax error in {} on line {}'.format(filename, lineNum))
-
-    def remove_repository(self, rep):
+    def remove_repository(self, dir):
         r'''
-        Remove the key-value pair index by `key` from the catalogue dictionary
+        Remove the directory `dir` from the catalogue of repositories rto sync
         '''
-        if rep in self.catalogue:
-            del self.catalogue[rep]
+        if rdir in self.catalogue:
+            del self.catalogue[dir]
         else:
-            raise ValueError('Unknown repository {}'.format(rep))
+            raise ValueError('Unknown repository {}'.format(dir))
+        self.save_catalogue()
 
     def save_catalogue(self):
-        repositories = self.catalogue.keys()
+        r''' Save the catalogue of git repositories to sync '''
+        max = max(len(dir) for dir in self.catalogue)
         with open(self.filename, 'w') as catalogue:
-            if self.prolog != '':
-                catalogue.write(self.prolog+'\n')
-            catalogue.write('\n'.join(['{key} = {value}'.format(
-                key = key.replace('-',' '), value=self.catalogue[key])
-                for key in self.catalogue]))
+            catalogue.write(PROLOG+'\n')
+            catalogue.write('\n'.join(
+                ['{dir:<{max}} = {rep}'.format(dir=dir, rep=self.catalogue[rep], max=max)]
+            )
 
 
 # ---------------------------------------------------------------------------------------
@@ -153,18 +162,6 @@ class bitbucket_sync(object):
             self.catalogue.remove_repository( options.add )
             self.catalogue.save_catalogue()
 
-    def get_repository(self):
-        r''' 
-        Get the repository details for the current directory
-        '''
-        try:
-            details = subprocess.check_output("git remote -v | awk '/fetch/ {print $2}'", shell=True)
-            if '/' in details:
-                rep, dir = details.split('/')
-
-        except subprocess.CalledProcessError:
-            print('Error: Not a git repository')
-            sys.exit(1)
 
     def push_respositories():
         r'''
@@ -205,17 +202,26 @@ if __name__ == '__main__':
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('-a', '--add', nargs=1, type=str, action='store', default=None)
-    parser.add_argument('-c', '--catalogue', type=str, default=CATALOGUE,
-                        help='Catalogue of bitbucket repositories
+    parser.add_argument('-a', '--add', action='store_true', default=False,
+                        help='Add current repository to the catalogue'
     )
-    parser.add_argument('-u','--update',action='store_true', default=False,
+    parser.add_argument('-r', '--remove', action='store_true', default=False,
+                        help='Remove current repository from the catalogue'
+    )
+    parser.add_argument('-c', '--catalogue', type=str, default=CATALOGUE,
+                        help='specify the catalogue of bitbucket repositories'
+    )
+    parser.add_argument('-s','--update',action='store_true', default=False,
+                        help='Syncronise, or pull, all repositories in the catalogue'
+    )
     parser.add_argument('-i','--install',action='store_true', default=False,
+                        help='Install of the repositories listed in the catalogue'
+    )
     parser.add_argument('-p','--push',action='store_true', default=False,
-                        help='commit and push all repositories to bitbucket'
+                        help='Commit and push all repositories to bitbucket'
     )
     parser.add_argument('-q','--quiet',action='store_true', default=False,
-                         help='minimise messages'
+                        help='minimise messages'
     )
 
     options = parser.parse_args()
