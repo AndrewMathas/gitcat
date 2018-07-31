@@ -2,7 +2,7 @@
 
 r'''
 Simple script to  synchronise all git repositories at once. It uses the
-catalogue of repositories as stored in the gitsyncrc, which is either in
+catalogue of repositories as stored in the gitcatrc, which is either in
 the directory ~/.dotfiles/config or in the HOME directory.
 
 Andrew Mathas 2018
@@ -15,16 +15,24 @@ import sys
 
 # ---------------------------------------------------------------------------------------
 # Helper commands
-is_git_repository = lambda rep: subprocess.run('git rev-parse --is-inside-work-tree', shell=True, capture_output=True).returncode==0
-run_quiet   = lambda cmd: subprocess(cmd.split(' '), capture_output=True)
-run_verbose = lambda cmd: subprocess(cmd.split(' '), stdout=open(os.devnull, 'wb'))
+run_quiet = lambda cmd: subprocess.run(cmd.strip().split(' '), capture_output=True)
+run_verbose = lambda cmd: subprocess.run(cmd.strip().split(' '), stdout=open(os.devnull, 'wb'))
+
+def is_git_repository(dir):
+    r' Return `True` if `dir` is a git repository and `False` otherwise'
+    if os.path.isdir(dir):
+        os.chdir(dir)
+        is_git = run_quiet('git rev-parse --is-inside-work-tree')
+        return is_git.returncode == 0 and 'true' in is_git.stdout.decode()
+
+    return False
 
 # ---------------------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------------------
-class GitSync:
+class GitCat:
     r"""
-    Usage: GitSync(options)
+    Usage: GitCat(options)
 
     A class for reading, accessing and storing details of the different git
     repositories. These are stored in `filename` in the form:
@@ -39,6 +47,7 @@ class GitSync:
     def __init__(self, options):
         self.prefix = options.prefix
         self.filename = options.catalogue
+        self.options = options
         self.catalogue = {}
         self.read_catalogue()
 
@@ -48,12 +57,15 @@ class GitSync:
             self.run  = lambda cmd: run_verbose(cmd)
 
         # run corresponding command
-        if options.command == 'list':
+        print('options={}'.format(options))
+        getattr(self, options.command)()
 
-        if hasattr(options, 'commands'):
-            getattr(self, options.command)(options.commands)
-        else:
-            getattr(self, options.command)()
+    def error(self, err):
+        r'''
+        Print error message amd exit.
+        '''
+        print('git cat: error - {}'.format(err))
+        sys.exit(1)
 
     def read_catalogue(self):
         r'''
@@ -75,6 +87,8 @@ class GitSync:
                         dir = dir.strip()
                         if dir in self.catalogue:
                             raise ValueError('{} appears in the catalogue more than once!;'.format(dir))
+                        elif dir.lower == 'prefix':
+                            self.prefix = rep.strip()
                         else:
                             self.catalogue[dir] = rep.strip()
         except (FileNotFoundError, IOError):
@@ -85,17 +99,48 @@ class GitSync:
         r'''
         Return a string that lists the repositories in the catalogue.
         '''
-        m = max(len(dir) for dir in self.catalogue)
+        m = max(len(dir) for dir in sorted(self.catalogue))
         return '\n'.join('{dir:<{max}} = {rep}'.format(
                        dir=dir, rep=self.catalogue[dir], max=m) for dir in sorted(self.catalogue.keys())
                 )
+
+    def path(self, dir):
+        r'''
+        Return the path to the directory `dir`, adding `self.prefix` if
+        necessary.
+        '''
+        return dir if dir.startswith('/') else os.path.join(self.prefix, dir)
+
+    def short_path(self, dir):
+        r'''
+        Return the shortened path to the directory `dir` obtained by removing `self.prefix` if
+        necessary.
+        '''
+        return dir[len(self.prefix)+1:] if dir.startswith(self.prefix) else dir
+
+    def changed_files(self):
+        r'''
+        Return `True` if the repository in the current directory has changed
+        and `False` otherwise. We assume that we are in a git repository.
+        '''
+        try:
+            changed = run_quiet('git diff-index --name-only HEAD')
+        except subprocess.CalledProcessError:
+            self.error('there was a problem running git')
+
+        if status.returncode != 0:
+            self.error('there was a problem running git')
+
+        return changed.stdout.decode().replace('\n', ' ')
 
     def save_catalogue(self):
         r''' 
         Save the catalogue of git repositories to sync
         '''
         with open(self.filename, 'w') as catalogue:
-            catalogue.write(r'# List of git repositories to sync using gitsync\n')
+            catalogue.write('# List of git repositories to sync using gitcat\n\n')
+            if self.prefix != os.environ['HOME']:
+                print('prefix = {}\n\n'.format(self.prefix))
             catalogue.write(self.list_catalogue())
 
 
@@ -109,35 +154,43 @@ class GitSync:
         '''
         try:
             # find the root directory for the repository and the remote URL`
-            dir = subprocess.check_output('git root', shell=True)
-            rep = subprocess.check_output('git remote get-url --push origin', shell=True)
+            dir = run_quiet('git root')
+            rep = run_quiet('git remote get-url --push origin')
 
         except subprocess.CalledProcessError:
-            raise ValueError('Error: Not a git repository')
+            self.error('not a git repository')
 
-        if len(dir)>0 and len(rep)>0:
-            if rep in self.catalogue:
+        if dir.returncode == 0 and rep.returncode == 0:
+            dir = self.short_path( dir.stdout.decode().strip() )
+            rep = rep.stdout.decode().strip()
+            if dir in self.catalogue:
                 # give an error if repository is already in the catalogue
-                raise ValueError('The current repository {} is already being synced'.format(dir))
+                print('The git repository in {} is already being synced'.format(dir))
+                sys.exit(1)
             else:
-                # add to the repository and save
+                # add current directory to the repository and save
                 self.catalogue[dir] = rep
                 self.save_catalogue()
-        elif len(dir)>0:
-            raise ValueError('Unable to get remote repository details for the repository in {}'.format(dir))
-        elif len(rep)>0:
-            raise ValueError('Unable to get root directory for the repository {}'.format(rep))
+        elif rep.returncode > 0:
+            raise ValueError('Unable to get remote repository details for the repository in {}'.format(dir.stdout.decode().strip()))
+        elif dir.returncode > 0:
+            raise ValueError('Unable to get root directory for the repository {}'.format(rep.stdout.decode().strip()))
         else:
             raise ValueError('Unable to get any repository details')
 
     def commit(self):
-        raise NotImplementedError('commit not yet implemented')
+        for rep in self.catalogue:
+            dir = self.path(rep)
+            changed_files = self.changed_files()
+            if changed_files != '':
+                changed_files = 'GitCat updating '+changed_files
+                self.run('git commit -a --message "{}"'.format(changed_files)
 
     def git(self, commands):
         r''' Run git commands on every repository in the catalogue '''
         git_command = 'git {}'.format(' '.join(cmd for cmd in commands))
         for rep in self.catalogue:
-            dir = os.path.join(self.prefix, rep)
+            dir = self.path(rep)
             if is_git_repository(dir):
                 os.chdir(dir)
                 print('Repository = {}, command={}'.format(rep, git_command))
@@ -147,7 +200,7 @@ class GitSync:
         r'''
         Install all of the repositories in the catalogue
         '''
-        self.pull(install=true)
+        self.pull(install=True)
 
     def list(self, verbose=False):
         r'''
@@ -161,7 +214,7 @@ class GitSync:
         already exist on this computer or if `install==True`
         '''
         for rep in self.catalogue:
-            dir = os.path.join(self.prefix, rep)
+            dir = self.path(rep)
             if is_git_repository(dir):
                 os.chdir(dir)
                 self.run('git pull')
@@ -180,21 +233,24 @@ class GitSync:
         TODO: trap errors?
         '''
         for rep in self.catalogue:
-            dir = os.path.join(self.prefix, rep)
+            dir = self.path(rep)
             if is_git_repository(dir):
                 os.chdir(dir)
-                try:
-                    self.run('git diff --quiet 2> /dev/null || git commit --quiet -m "{}" 2> /dev/null'.format(
-                             'Saving and pushing repository')
-                    )
-                    self.run('git push')
+                commit = self.commit(rep)
+                if commit:
+                    push = self.run('git push --dry-run --porcelain')
+                    if push.returncode == 0 and not options.dry_run:
+                        run_quiet('git push --porcelain')
+                    else:
+                        print('{} - {}'.format(rep, push.stderr.decode()))
                 except:
-                    print('There was an error pushing the repository in {}'.format(self.catalogue[repository]))
+                    print('There was an error pushing the repository in {}'.format(rep))
 
     def remove(self):
         r'''
         Remove the directory `dir` from the catalogue of repositories to sync
         '''
+        dir = self.short_path(os.getcwd())
         if dir not in self.catalogue:
             raise ValueError('Unknown repository {}'.format(dir))
 
@@ -205,30 +261,44 @@ class GitSync:
         r'''
         Print the status of all of the repositories in the catalogue
         '''
-        for rep in self.catalogue:
-            dir = os.path.join(self.prefix, rep)
+        m = max(len(dir) for dir in sorted(self.catalogue))
+        if options.short:
+            status_command = 'git diff --no-color --shortstat HEAD'
+        else:
+            status_command = 'git status --porcelain --untracked-files={}'.format(self.options.untracked_files)
+
+        for rep in sorted(self.catalogue.keys()):
+            dir = self.path(rep)
             if is_git_repository(dir):
                 os.chdir(dir)
                 try:
-                    self.run('git status')
+                    status = run_quiet(status_command)
                 except:
                     print('There was an error obtaining the status for {}'.format(dir))
+                if status.returncode != 0:
+                    print('There was an error obtaining the status for {}\n  - {}'.format(dir, status.stderr.decode()))
+                elif status.stdout != b'':
+                    if self.options.short:
+                        print('{dir:<{max}} {status}'.format(dir=rep, max=m, status = status.stdout.decode().strip()))
+                    else:
+                        print('{}\n  - {}'.format(rep, '\n  - '.join(f for f in status.stdout.decode().split('\n') if f!='')))
 
 
 # ---------------------------------------------------------------------------------------
-# location of the gitsyncrc file
+# location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc and
+# then to ~/.gitcatrc
 if os.path.isdir(os.path.expanduser('~/.dotfiles/config')):
-    RC_FILE = os.path.expanduser('~/.dotfiles/config/gitsyncrc')
+    RC_FILE = os.path.expanduser('~/.dotfiles/config/gitcatrc')
 if not os.path.isfile(RC_FILE):
-    RC_FILE = os.path.expanduser('~/.gitsyncrc')
+    RC_FILE = os.path.expanduser('~/.gitcatrc')
 
 # ---------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser( 
-           description = 'Synchronise multiple git repositories with external repositories',
-           usage = 'gitsync [options] <command> [args]'
+           description = 'Cathronise multiple git repositories with external repositories',
+           usage = 'gitcat [options] <command> [args]'
     )
     parser.add_argument('-c', '--catalogue', type=str, default=RC_FILE,
                         help='specify the catalogue of bitbucket repositories'
@@ -256,17 +326,29 @@ if __name__ == '__main__':
 
     subparsers.add_parser('missing', help='List the repositories in the catalogue')
 
-    subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
+    pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
+    pull.add_argument('commands', type=str, nargs='*', help='')
+    pull.add_argument('-n','--dry-run', action='store_true', default=False,
+                      help='Do everything except actually send the updates'
+    )
 
-    subparsers.add_parser('push', help='Push all repositories in the catalogue')
-
+    push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
+    push.add_argument('commands', type=str, nargs='*', help='')
+    push.add_argument('-n','--dry-run', action='store_true', default=False,
+                      help='Do everything except actually send the updates'
+    )
     subparsers.add_parser('remove', help='Remove current repository from the catalogue')
 
-    subparsers.add_parser('status', help='Obtain the status of the repositories in the catalogue')
+    status = subparsers.add_parser('status', help='Print the status of each repository in the catalogue')
+    status.add_argument('-s','--short', action='store_true', default=False,
+                        help='Give the output in the short-format')
+    status.add_argument('-u','--untracked-files', choices=['no', 'normal','all'], default='no',
+                        help='Show untracked files using git status mode'
+    )
 
     options = parser.parse_args()
     if options.command is None:
         parser.print_help()
         sys.exit(1)
 
-    GitSync(options)
+    GitCat(options)
