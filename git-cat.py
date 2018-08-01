@@ -173,7 +173,6 @@ class GitCat:
                 print('prefix = {}\n\n'.format(self.prefix))
             catalogue.write(self.list_catalogue())
 
-
     # ---------------------------------------------------------------------------------------
     # Now implement the various commands available from the command line
     # ---------------------------------------------------------------------------------------
@@ -378,10 +377,17 @@ class _HelpAction(argparse._HelpAction):
 
 
 class CustomHelpFormatter(argparse.HelpFormatter):
+    def add_usage(self, usage, actions, groups, prefix=None):
+        if prefix is None:
+            prefix = 'Usage: '
+
+        add_usage =  super(CustomHelpFormatter, self).add_usage(
+                        usage, actions, groups, prefix)
+        print('{s}\nAdding = {u}\n{s}'.format(s='-'*40,u=add_usage))
+
     def _format_action(self, action):
         if type(action) == argparse._SubParsersAction:
             # inject new class variable for subcommand formatting
-            print('ACTION={}\n'.format(dir(action)))
             subactions = action._get_subactions()
             invocations = [self._format_action_invocation(a) for a in subactions]
             self._subcommand_max_length = max(len(i) for i in invocations)
@@ -393,8 +399,6 @@ class CustomHelpFormatter(argparse.HelpFormatter):
             help_text = ""
             if action.help:
                 help_text = self._expand_help(action)
-            print('SELF={}\n'.format(dir(self)))
-            print('ACTIONS USAGE={}\n'.format(self.add_usage('XXX',[],[])))
             return "  {:{width}} -  {}\n".format(subcommand, help_text, width=width)
 
         elif type(action) == argparse._SubParsersAction:
@@ -405,6 +409,21 @@ class CustomHelpFormatter(argparse.HelpFormatter):
             return msg
         else:
             return super(CustomHelpFormatter, self)._format_action(action)
+
+    def _metavar_formatter(self, action, default_metavar):
+        if action.metavar is not None:
+            result = action.metavar
+        elif action.choices is not None:
+            result = 'command'
+        else:
+            result = default_metavar
+
+        def format(tuple_size):
+            if isinstance(result, tuple):
+                return result
+            else:
+                return (result, ) * tuple_size
+        return format
 
 
 if __name__ == '__main__':
@@ -432,7 +451,9 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(help='Command', dest='command')
 
-    add = subparsers.add_parser('add', help='Add repository to the catalogue')
+    add = subparsers.add_parser('add', help='Add repository to the catalogue',
+                                       formatter_class=CustomHelpFormatter,
+    )
     add.add_argument('repository', type=str, nargs='?', default=None,
                      help='Name of repository to add')
 
