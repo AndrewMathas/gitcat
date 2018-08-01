@@ -285,7 +285,7 @@ class GitCat:
                     if push.returncode == 0:
                         self.message(' - updated')
             if push.returncode != 0:
-                print('\n  {}'.format('\n '.join(push.stderr.decode().split('\n'))))
+                print('\n  {}'.format('\n  '.join(push.stderr.decode().split('\n'))))
 
     def remove(self):
         r'''
