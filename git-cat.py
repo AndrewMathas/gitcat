@@ -43,7 +43,6 @@ class GitCat:
         self.catalogue = {}
         self.read_catalogue()
 
-        print('options = {}'.format(options))
         # run corresponding command
         getattr(self, options.command)()
 
@@ -158,7 +157,6 @@ class GitCat:
         The subprocess is returned.
         '''
         run = subprocess.run(cmd.strip(), shell=True, capture_output=True)
-        print('run={}'.format(run))
         if run.stderr != b'':
             self.verbose( 'stderr: {}'.format(run.stderr.decode()) )
         return run
@@ -272,7 +270,7 @@ class GitCat:
         TODO: trap errors?
         '''
         for rep in self.catalogue:
-            self.message('pushing from the repository {}'.format(rep))
+            self.message('pushing from {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
