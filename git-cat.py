@@ -101,12 +101,12 @@ class GitCat:
 
         return False
 
-    def message(self, msg):
+    def message(self, msg, end=None):
         r'''
         If `self.verbose` is `True` then print `msg` to stdout.
         '''
         if self.verbose:
-            print(msg)
+            print(msg, end=end)
 
     def list_catalogue(self):
         r'''
@@ -270,16 +270,21 @@ class GitCat:
         TODO: trap errors?
         '''
         for rep in self.catalogue:
-            self.message('pushing from {}'.format(rep))
+            self.message('pushing from {}'.format(rep), end='')
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
 
             push = self.run_command('git push --dry-run --porcelain')
             if not options.dry_run:
-                push = self.run_command('git push --quiet --porcelain')
+                if 'up to date' in push.stdout.decode():
+                    print(' - up to date')
+                else:
+                    push = self.run_command('git push --quiet --porcelain')
+                    if push.returncode == 0:
+                        print(' - Done')
             if push.returncode != 0:
-                print('  error: {}'.format(push.stderr))
+                print('  error: {}'.format(push.stderr.decode()))
 
     def remove(self):
         r'''
