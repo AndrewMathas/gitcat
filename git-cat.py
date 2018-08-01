@@ -276,11 +276,10 @@ class GitCat:
                 self.commit_repository(dir)
 
             push = self.run_command('git push --dry-run --porcelain')
+            if not options.dry_run:
+                push = self.run_command('git push --quiet --porcelain')
             if push.returncode != 0:
-                print('push = {}'.format(push))
-                print('{} - {}'.format(rep, push.stderr.decode()))
-            elif not options.dry_run:
-                self.run_command('git push --quiet --porcelain')
+                print('  error: {}'.format(push.stderr))
 
     def remove(self):
         r'''
