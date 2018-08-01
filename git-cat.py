@@ -160,9 +160,6 @@ class GitCat:
         The subprocess is returned.
         '''
         run = subprocess.run(cmd.strip(), shell=True, capture_output=True)
-        if run.stderr != b'':
-            print('run={}'.format(run))
-            self.message( 'stderr: {}'.format(run.stderr.decode()) )
         return run
 
     def save_catalogue(self):
