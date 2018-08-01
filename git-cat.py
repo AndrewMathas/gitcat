@@ -102,6 +102,13 @@ class GitCat:
 
         return False
 
+    def message(self, msg):
+        r'''
+        If `self.verbose` is `True` then print `msg` to stdout.
+        '''
+        if self.verbose:
+            print(msg)
+
     def list_catalogue(self):
         r'''
         Return a string that lists the repositories in the catalogue.
@@ -151,9 +158,8 @@ class GitCat:
         The subprocess is returned.
         '''
         run = subprocess.run(cmd.strip(), shell=True, capture_output=True)
-        if self.verbose:
-            if run.stderr != b'':
-                print('stderr: {}'.format(run.stderr.decode()) )
+        if run.stderr != b'':
+            self.verbose( 'stderr: {}'.format(run.stderr.decode()) )
         return run
 
     def save_catalogue(self):
@@ -197,7 +203,7 @@ class GitCat:
             rep = rep.stdout.decode().strip()
             if dir in self.catalogue:
                 # give an error if repository is already in the catalogue
-                self.error('the git repository in {} is already being synced'.format(dir))
+                self.error('the git repository in {} is already in the catalogue'.format(dir))
             else:
                 # add current directory to the repository and save
                 self.catalogue[dir] = rep
@@ -266,8 +272,7 @@ class GitCat:
         TODO: trap errors?
         '''
         for rep in self.catalogue:
-            if self.verbose:
-                print('pushing from the repository {}'.format(rep))
+            self.message('pushing from the repository {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
@@ -334,23 +339,96 @@ DRYRUN='''Do not create a commit, but show a list of paths that are to be
 committed, paths with local changes that will be left uncommitted and
 paths that are untracked.'''
 
+class _HelpAction(argparse._HelpAction):
+    r'''
+    Override default help and print extendded help for each option.
+    Based, in part, on
+    https://stackoverflow.com/questions/20094215/argparse-subparser-monolithic-help-output
+    '''
+    def __call__(self, parser, namespace, values, option_string=None):
+        parser.print_help()
+        # retrieve subparsers from parser
+        subparsers_actions = [
+            action for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)]
+        # there will probably only be one subparser_action,
+        # but better safe than sorry
+        m = max(len('{}'.format(choice)) for subparsers_action in subparsers_actions for choice in subparsers_action.choices)
+        for subparsers_action in subparsers_actions:
+            # get all subparsers and print help
+            for choice, subparser in subparsers_action.choices.items():
+                print('{choice:>{max}}|{help}\n\nDESCRIPTION: {description}\n\nFORMAT_USAGE: {uformat}\n\nFORMAT_HELP: {hformat}\n\nPRINT HELP: {phelp}\n\nPRINT USAGE: {pusage}\n\nPROG: {prog}\n\nUSAGE: {usage}\nSUBPARSER: {sub}'.format(
+                          choice = choice,
+                          max = m,
+                          help = subparser.format_help(),
+                          description = subparser.description,
+                          hformat = subparser.format_help(),
+                          uformat = subparser.format_usage(),
+                          prog = subparser.prog,
+                          usage = subparser.usage,
+                          phelp = subparser.print_help(),
+                          pusage = subparser.print_usage(),
+                          sub = dir(subparser)
+                      )
+                )
+
+
+        parser.exit()
+
+
+class CustomHelpFormatter(argparse.HelpFormatter):
+    def _format_action(self, action):
+        if type(action) == argparse._SubParsersAction:
+            # inject new class variable for subcommand formatting
+            print('ACTION={}\n'.format(dir(action)))
+            subactions = action._get_subactions()
+            invocations = [self._format_action_invocation(a) for a in subactions]
+            self._subcommand_max_length = max(len(i) for i in invocations)
+
+        if type(action) == argparse._SubParsersAction._ChoicesPseudoAction:
+            # format subcommand help line
+            subcommand = self._format_action_invocation(action) # type: str
+            width = self._subcommand_max_length
+            help_text = ""
+            if action.help:
+                help_text = self._expand_help(action)
+            print('SELF={}\n'.format(dir(self)))
+            print('ACTIONS USAGE={}\n'.format(self.add_usage('XXX',[],[])))
+            return "  {:{width}} -  {}\n".format(subcommand, help_text, width=width)
+
+        elif type(action) == argparse._SubParsersAction:
+            # process subcommand help section
+            msg = '\n'
+            for subaction in action._get_subactions():
+                msg += self._format_action(subaction)
+            return msg
+        else:
+            return super(CustomHelpFormatter, self)._format_action(action)
+
+
 if __name__ == '__main__':
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser( 
-           description = 'Cathronise multiple git repositories with external repositories',
-           usage = 'gitcat [options] <command> [args]'
+           #add_help=False,
+           description = 'Simultaneously push and pull to a catalogue of remote git repositories',
+           formatter_class=CustomHelpFormatter,
+           prog = 'git cat',
     )
+    parser._positionals.title = 'Commands'
+    parser._optionals.title = 'Optional arguments'
+
     parser.add_argument('-c', '--catalogue', type=str, default=RC_FILE,
                         help='specify the catalogue of bitbucket repositories'
     )
-
-    parser.add_argument('-v','--verbose', action='store_true', default=False,
-                        help='minimise messages'
+    #parser.add_argument('-h', '--help', action=_HelpAction, help='show this help message and exit')  # add custom help
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='print messages'
     )
     parser.add_argument('-p', '--prefix', type=str, default=os.environ['HOME'],
                         help='Prefix directory name containing all repositories'
     )
+
     subparsers = parser.add_subparsers(help='Command', dest='command')
 
     add = subparsers.add_parser('add', help='Add repository to the catalogue')
@@ -366,7 +444,11 @@ if __name__ == '__main__':
     git = subparsers.add_parser('git', help='Run git commands on all repositories')
     git.add_argument('commands', type=str, nargs='+', help='')
 
-    subparsers.add_parser('install', help='Install all repositories in the catalogue')
+    install = subparsers.add_parser('install', help='Install all repositories in the catalogue')
+    install.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='print messages'
+    )
+
 
     list = subparsers.add_parser('list', help='List all repositories in the catalogue')
 
@@ -382,7 +464,7 @@ if __name__ == '__main__':
     push.add_argument('-n','--dry-run', action='store_true', default=False,
                       help='Do everything except actually send the updates'
     )
-    push.add_argument('-v','--verbose', action='store_true', default=False,
+    push.add_argument('-v', '--verbose', action='store_true', default=False,
                       help='Print messages each time a repository is pushed')
 
     remove = subparsers.add_parser('remove', help='Remove repository from the catalogue')
