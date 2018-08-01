@@ -112,9 +112,8 @@ class GitCat:
         r'''
         Return a string that lists the repositories in the catalogue.
         '''
-        m = max(len(dir) for dir in sorted(self.catalogue))
         return '\n'.join('{dir:<{max}} = {rep}'.format(
-                       dir=dir, rep=self.catalogue[dir], max=m) for dir in sorted(self.catalogue.keys())
+                       dir=dir, rep=self.catalogue[dir], max=self.max) for dir in sorted(self.catalogue.keys())
                 )
 
     def short_path(self, dir):
@@ -150,6 +149,9 @@ class GitCat:
                             self.catalogue[dir] = rep.strip()
         except (FileNotFoundError, IOError):
             self.error('there was a problem reading the catalogue file {}'.format(self.filename))
+
+        # set the maximum length of a catelogue key
+        self.max = max(len(dir) for dir in sorted(self.catalogue))
 
     def run_command(self, cmd):
         r'''
@@ -270,7 +272,7 @@ class GitCat:
         TODO: trap errors?
         '''
         for rep in self.catalogue:
-            self.message('pushing from {}'.format(rep), end='')
+            self.message('pushing from {:<{max}}'.format(rep, max=self.max), end='')
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
@@ -278,7 +280,7 @@ class GitCat:
             push = self.run_command('git push --dry-run --porcelain')
             if not options.dry_run:
                 if 'up to date' in push.stdout.decode():
-                    print(' - up to date')
+                    print(' - no changes')
                 else:
                     push = self.run_command('git push --quiet --porcelain')
                     if push.returncode == 0:
@@ -304,7 +306,6 @@ class GitCat:
         r'''
         Print the status of all of the repositories in the catalogue
         '''
-        m = max(len(dir) for dir in sorted(self.catalogue))
         if options.verbose:
             status_command = 'git status --porcelain --untracked-files={}'.format(self.options.untracked_files)
         else:
@@ -323,9 +324,9 @@ class GitCat:
                     if self.options.verbose:
                         print('{}\n  - {}'.format(rep, '\n  - '.join(f for f in status.stdout.decode().split('\n') if f!='')))
                     else:
-                        print('{dir:<{max}} {status}'.format(dir=rep, max=m, status = status.stdout.decode().strip()))
+                        print('{dir:<{max}} {status}'.format(dir=rep, max=self.max, status = status.stdout.decode().strip()))
                 elif self.options.verbose:
-                    print('{dir:<{max}} OK'.format(dir=rep, max=m))
+                    print('{dir:<{max}} OK'.format(dir=rep, max=self.max))
 
 
 # ---------------------------------------------------------------------------------------
