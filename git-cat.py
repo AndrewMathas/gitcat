@@ -107,7 +107,7 @@ class GitCat:
         as the, well, ending. If `self.verbose` is `False` then do nothing.
         '''
         if self.verbose:
-            print(msg, ending=end)
+            print(msg, end=ending)
 
     def list_catalogue(self):
         r'''
@@ -161,7 +161,8 @@ class GitCat:
         '''
         run = subprocess.run(cmd.strip(), shell=True, capture_output=True)
         if run.stderr != b'':
-            self.verbose( 'stderr: {}'.format(run.stderr.decode()) )
+            print('run={}'.format(run))
+            self.message( 'stderr: {}'.format(run.stderr.decode()) )
         return run
 
     def save_catalogue(self):
@@ -308,7 +309,7 @@ class GitCat:
         Print the status of all of the repositories in the catalogue
         '''
         if options.verbose:
-            status_command = 'git status --porcelain --untracked-files={}'.format(self.options.untracked_files)
+            status_command = 'git status --branch --short --porcelain --untracked-files={}'.format(self.options.untracked_files)
         else:
             status_command = 'git diff --no-color --shortstat HEAD'
 

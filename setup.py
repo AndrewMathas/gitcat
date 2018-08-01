@@ -45,7 +45,7 @@ setup(name             = settings.program,
 
       license          = settings.licence,
       classifiers      = [
-        'Development Status :: 5 - Alpha',
+        'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
