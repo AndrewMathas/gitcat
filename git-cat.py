@@ -101,12 +101,13 @@ class GitCat:
 
         return False
 
-    def message(self, msg, end=None):
+    def message(self, msg, ending=None):
         r'''
-        If `self.verbose` is `True` then print `msg` to stdout.
+        If `self.verbose` is `True` then print `msg` to stdout, with `ending`
+        as the, well, ending. If `self.verbose` is `False` then do nothing.
         '''
         if self.verbose:
-            print(msg, end=end)
+            print(msg, ending=end)
 
     def list_catalogue(self):
         r'''
@@ -269,10 +270,10 @@ class GitCat:
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
 
-        TODO: trap errors?
+        TODO: trap errors?/conflicts
         '''
         for rep in self.catalogue:
-            self.message('pushing from {:<{max}}'.format(rep, max=self.max), end='')
+            self.message('Checking {:<{max}}'.format(rep, max=self.max), ending='')
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
@@ -284,7 +285,7 @@ class GitCat:
                 else:
                     push = self.run_command('git push --quiet --porcelain')
                     if push.returncode == 0:
-                        print(' - Done')
+                        print(' - changes pushed')
             if push.returncode != 0:
                 print('  error: {}'.format(push.stderr.decode()))
 
@@ -380,13 +381,6 @@ class _HelpAction(argparse._HelpAction):
 
 
 class CustomHelpFormatter(argparse.HelpFormatter):
-    def add_usage(self, usage, actions, groups, prefix=None):
-        if prefix is None:
-            prefix = 'Usage: '
-
-        add_usage =  super(CustomHelpFormatter, self).add_usage(
-                        usage, actions, groups, prefix)
-        print('{s}\nAdding = {u}\n{s}'.format(s='-'*40,u=add_usage))
 
     def _format_action(self, action):
         if type(action) == argparse._SubParsersAction:
