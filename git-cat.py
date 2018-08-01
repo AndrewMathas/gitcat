@@ -158,6 +158,7 @@ class GitCat:
         The subprocess is returned.
         '''
         run = subprocess.run(cmd.strip(), shell=True, capture_output=True)
+        print('run={}'.format(run))
         if run.stderr != b'':
             self.verbose( 'stderr: {}'.format(run.stderr.decode()) )
         return run
@@ -449,9 +450,7 @@ if __name__ == '__main__':
                         help='print messages'
     )
 
-
     list = subparsers.add_parser('list', help='List all repositories in the catalogue')
-
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
     pull.add_argument('commands', type=str, nargs='*', help='')
