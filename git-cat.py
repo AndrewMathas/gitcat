@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 r'''
-Simple script to  synchronise all git repositories at once. It uses the
-catalogue of repositories as stored in the gitcatrc, which is either in
-the directory ~/.dotfiles/config or in the HOME directory.
+A command line tool for synchroning a catalogue of git repositories. It uses
+the catalogue of repositories as stored in the gitcatrc, which is either in the
+directory ~/.dotfiles/config or in the HOME directory.
 
 Andrew Mathas 2018
 '''
