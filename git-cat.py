@@ -10,6 +10,7 @@ Andrew Mathas 2018
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 
@@ -30,14 +31,14 @@ class GitCat:
        directory2 = repository2
        ...
 
-    a file. Any lines without a key-value pair are ignored.
+    Any lines without a key-value pair are ignored.
     """
 
     def __init__(self, options):
         self.filename = options.catalogue
         self.options = options
         self.prefix = options.prefix
-        self.verbose = options.verbose
+        self.quiet = options.quiet
 
         # read the catolgue from the rc file
         self.catalogue = {}
@@ -54,10 +55,10 @@ class GitCat:
         try:
             changed = self.run_command('git diff-index --name-only HEAD')
         except subprocess.CalledProcessError:
-            self.error('there was a problem running git')
+            self.error_message('there was a problem running git')
 
         if changed.returncode != 0:
-            self.error('there was a problem running git')
+            self.error_message('there was a problem running git')
 
         return changed.stdout.decode().replace('\n', ' ')
 
@@ -74,7 +75,7 @@ class GitCat:
             else:
                 self.run_command('git commit -a --message="{}"'.format(commit_message))
 
-    def error(self, err):
+    def error_message(self, err):
         r'''
         Print error message amd exit.
         '''
@@ -101,20 +102,20 @@ class GitCat:
 
         return False
 
-    def anti_message(self, msg, ending=None):
+    def quiet_message(self, msg, ending=None):
         r'''
-        If `self.verbose` is `False` then print `msg` to stdout, with `ending`
-        as the, well, ending. If `self.verbose` is `False` then do nothing.
+        If `self.quiet` is `False` then print `msg` to stdout, with `ending`
+        as the, well, ending. If `self.quiet` is `True` then do nothing.
         '''
-        if not self.verbose:
+        if self.quiet:
             print(msg, end=ending)
 
     def message(self, msg, ending=None):
         r'''
-        If `self.verbose` is `True` then print `msg` to stdout, with `ending`
-        as the, well, ending. If `self.verbose` is `False` then do nothing.
+        If `self.quiet` is `True` then print `msg` to stdout, with `ending`
+        as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
-        if self.verbose:
+        if not self.quiet:
             print(msg, end=ending)
 
     def list_catalogue(self):
@@ -151,13 +152,13 @@ class GitCat:
                         dir, rep = line.split('=')
                         dir = dir.strip()
                         if dir in self.catalogue:
-                            self.error('{} appears in the catalogue more than once!'.format(dir))
+                            self.error_message('{} appears in the catalogue more than once!'.format(dir))
                         elif dir.lower == 'prefix':
                             self.prefix = rep.strip()
                         else:
                             self.catalogue[dir] = rep.strip()
         except (FileNotFoundError, IOError):
-            self.error('there was a problem reading the catalogue file {}'.format(self.filename))
+            self.error_message('there was a problem reading the catalogue file {}'.format(self.filename))
 
         # set the maximum length of a catelogue key
         self.max = max(len(dir) for dir in sorted(self.catalogue))
@@ -188,39 +189,42 @@ class GitCat:
         r'''
         Add the current repository to the catalogue
         '''
-        if self.options.repository is not None:
-            if self.options.repository.startswith('/'):
-                os.chdir( self.options.repository )
-            else:
-                os.chdir( os.path.join(self.prefix, self.options.repository) )
-
-        if not self.is_git_repository('.'):
-            self.error('not a git repository')
-
-        try:
-            # find the root directory for the repository and the remote URL`
-            dir = self.run_command('git root')
-            rep = self.run_command('git remote get-url --push origin')
-
-        except subprocess.CalledProcessError:
-            self.error('not a git repository')
-
-        if dir.returncode == 0 and rep.returncode == 0:
-            dir = self.short_path( dir.stdout.decode().strip() )
-            rep = rep.stdout.decode().strip()
-            if dir in self.catalogue:
-                # give an error if repository is already in the catalogue
-                self.error('the git repository in {} is already in the catalogue'.format(dir))
-            else:
-                # add current directory to the repository and save
-                self.catalogue[dir] = rep
-                self.save_catalogue()
-        elif rep.returncode > 0:
-            self.error('Unable to get details of the remote repository for {}'.format(dir.stdout.decode().strip()))
-        elif dir.returncode > 0:
-            self.error('Unable to get root directory for the repository {}'.format(rep.stdout.decode().strip()))
+        if self.options.repository.startswith('/'):
+             dir = self.options.repository
         else:
-            self.error('Unable to get any repository details')
+            dir = os.path.join(self.prefix, self.options.repository)
+
+        if not (os.path.isdir(dir) and self.is_git_repository(dir)):
+            self.error_message('{} not a git repository'.format(dir))
+
+        # find the root directory for the repository and the remote URL`
+        os.chdir(dir)
+        dir = self.run_command('git root')
+        if dir.returncode != 0:
+            self.error_message('{} is not a git repository:\n  {}'.format(
+                   dir, 
+                   dir.stderr.decode().replace('\n', '\n  ')
+                )
+            )
+
+        rep = self.run_command('git remote get-url --push origin')
+        if rep.returncode != 0:
+            self.error_message('Unable to find remote repository for {} :\n  {}'.format(
+                   dir, 
+                   rep.stderr.decode().replace('\n', '\n  ')
+                )
+            )
+
+        dir = self.short_path( dir.stdout.decode().strip() )
+        rep = rep.stdout.decode().strip()
+        if dir in self.catalogue:
+            # give an error if repository is already in the catalogue
+            self.error_message('the git repository in {} is already in the catalogue'.format(dir))
+        else:
+            # add current directory to the repository and save
+            self.catalogue[dir] = rep
+            self.save_catalogue()
+            self.message('Adding {} to the catalgue'.format(dir))
 
     def commit(self):
         r'''
@@ -233,6 +237,36 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
+
+    def diff(self):
+        r'''
+        Run git diff with various options on the repositories in the
+        catalogue.
+        '''
+        diff_command = 'git diff'
+        for option in ['dirstat', 'numstat', 'stat', 'shortstat']:
+            opt = getattr(self.options, option)
+            if opt == True or opt == None:
+                diff_command += ' --'+option
+            elif opt != False:
+                diff_command += ' --{}={}'.format(option, opt)
+
+        diff_command += ' HEAD'
+        for rep in sorted(self.catalogue.keys()):
+            dir = self.expand_path(rep)
+            if self.is_git_repository(dir):
+                diff = self.run_command(diff_command)
+                if diff.returncode != 0:
+                    self.error_message('There was an error obtaining the diff for {}\n  - {}'.format(dir, diff.stderr.decode()))
+                elif diff.stdout != b'':
+                    if self.quiet:
+                        print('{dir:<{max}} {diff}'.format(dir=rep, max=self.max, diff = diff.stdout.decode().strip()))
+                    else:
+                        print('{}\n  {}'.format(rep, '\n  '.join(f for f in diff.stdout.decode().split('\n') if f!='')))
+                else:
+                    self.message('{dir:<{max}} unchanged'.format(dir=rep, max=self.max))
+
+
 
     def git(self, commands):
         r''' Run git commands on every repository in the catalogue '''
@@ -250,10 +284,18 @@ class GitCat:
         for rep in self.catalogue:
             dir = self.expand_path(rep)
             if not os.path.exists(dir):
-                self.message('Installing {:<{max}}'.format(rep, max=self.max))
-                os.mkdirs(dir)
-                self.run_command('git clone {rep} {dir}'.format(dir=rep, rep=self.catalogue[rep]))
-            if not self.is_git_repository(dir):
+                self.message('Installing {}'.format(rep, max=self.max), ending='')
+                parent = os.path.dirname(dir)
+                os.makedirs(parent, exist_ok=True)
+                os.chdir(parent)
+                if not self.options.dry_run:
+                    install = self.run_command('git clone --quiet {rep} {dir}'.format(dir=os.path.basename(dir), rep=self.catalogue[rep]))
+                    if install.returncode != 0 or install.stderr != b'':
+                        self.quiet_message('Installing {:<{max}}'.format(rep, max=self.max))
+                        print('  {}'.format(install.stderr.decode().replace('\n','\n  ')))
+                    else:
+                        self.message(' - done!')
+            if not (self.options.dry_run or self.is_git_repository(dir)):
                 print('{} is not a git repository!?'.format(rep))
 
     def list(self):
@@ -265,16 +307,19 @@ class GitCat:
     def pull(self):
         r'''
         Run through all repositories and update them if their directories
-        already exist on this computer or if `install==True`
+        already exist on this computer
+
+        TODO: trap errors?/conflicts
         '''
         for rep in self.catalogue:
             dir = self.expand_path(rep)
-            if self.is_git_repository(dir):
-                self.message('Updating {:<{max}}'.format(rep, max=self.max))
-                self.run_command('git pull')
+            if os.path.isdir(dir):
+                if self.is_git_repository(dir):
+                    self.message('Updating {:<{max}}'.format(rep, max=self.max))
+                    self.run_command('git pull')
 
-            else:
-                print('{} is not a git repository!?'.format(rep))
+                else:
+                    self.message('{} is not a git repository!?'.format(rep))
 
     def push(self):
         r'''
@@ -292,13 +337,13 @@ class GitCat:
             push = self.run_command('git push --dry-run --porcelain')
             if not options.dry_run:
                 if 'up to date' in push.stdout.decode():
-                    self.message(' - no changes')
+                    self.message(' - no change')
                 else:
                     push = self.run_command('git push --quiet --porcelain')
                     if push.returncode == 0:
                         self.message(' - updated')
             if push.returncode != 0:
-                self.anti_message('Checking {}'.format(rep), ending='')
+                self.quiet_message('Checking {}'.format(rep), ending='')
                 print('\n  {}'.format('\n  '.join(push.stderr.decode().split('\n'))))
 
     def remove(self):
@@ -306,23 +351,27 @@ class GitCat:
         Remove the directory `dir` from the catalogue of repositories to sync
         '''
         if self.options.repository is not None:
-            dir = self.short_path(os.path.expanduser(self.options.repository))
+            rep = self.short_path(os.path.expanduser(self.options.repository))
         else:
-            dir = self.short_path(os.getcwd())
-        if dir not in self.catalogue:
-            self.error('unknown repository {}'.format(dir))
+            rep = self.short_path(os.getcwd())
+        dir = self.expand_path(rep)
+        if not (rep in self.catalogue and self.is_git_repository(dir)):
+            self.error_message('unknown repository {}'.format(dir))
 
-        del self.catalogue[dir]
+        del self.catalogue[rep]
+        self.message('Removing {} from the catalgue'.format(dir))
         self.save_catalogue()
+
+        if self.options.delete:
+            # remove directory
+            self.message('Removing directory {}'.format(dir))
+            shutil.rmtree( dir )
 
     def status(self):
         r'''
         Print the status of all of the repositories in the catalogue
         '''
-        if options.verbose:
-            status_command = 'git status --branch --short --porcelain --untracked-files={}'.format(self.options.untracked_files)
-        else:
-            status_command = 'git diff --no-color --shortstat HEAD'
+        status_command = 'git status --branch --short --porcelain --untracked-files={}'.format(self.options.untracked_files)
 
         for rep in sorted(self.catalogue.keys()):
             dir = self.expand_path(rep)
@@ -330,16 +379,16 @@ class GitCat:
                 try:
                     status = self.run_command(status_command)
                 except:
-                    self.error('there was an error obtaining the status for {}'.format(dir))
+                    self.error_message('there was an error obtaining the status for {}'.format(dir))
                 if status.returncode != 0:
-                    self.error('There was an error obtaining the status for {}\n  - {}'.format(dir, status.stderr.decode()))
+                    self.error_message('There was an error obtaining the status for {}\n  - {}'.format(dir, status.stderr.decode()))
                 elif status.stdout != b'':
-                    if self.options.verbose:
-                        print('{}\n  - {}'.format(rep, '\n  - '.join(f for f in status.stdout.decode().split('\n') if f!='')))
-                    else:
+                    if self.quiet:
                         print('{dir:<{max}} {status}'.format(dir=rep, max=self.max, status = status.stdout.decode().strip()))
-                elif self.options.verbose:
-                    print('{dir:<{max}} OK'.format(dir=rep, max=self.max))
+                    else:
+                        print('{}\n  - {}'.format(rep, '\n  - '.join(f for f in status.stdout.decode().split('\n') if f!='')))
+                else:
+                    self.message('{dir:<{max}} unchanged'.format(dir=rep, max=self.max))
 
 
 # ---------------------------------------------------------------------------------------
@@ -423,7 +472,7 @@ class CustomHelpFormatter(argparse.HelpFormatter):
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
-            result = 'command'
+            result = '<command> [options]'
         else:
             result = default_metavar
 
@@ -451,19 +500,19 @@ if __name__ == '__main__':
                         help='specify the catalogue of bitbucket repositories'
     )
     #parser.add_argument('-h', '--help', action=_HelpAction, help='show this help message and exit')  # add custom help
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+    parser.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='print messages'
     )
     parser.add_argument('-p', '--prefix', type=str, default=os.environ['HOME'],
                         help='Prefix directory name containing all repositories'
     )
 
-    subparsers = parser.add_subparsers(help='Command', dest='command')
+    subparsers = parser.add_subparsers(help='Subcommand to run', dest='command')
 
     add = subparsers.add_parser('add', help='Add repository to the catalogue',
                                        formatter_class=CustomHelpFormatter,
     )
-    add.add_argument('repository', type=str, nargs='?', default=None,
+    add.add_argument('repository', type=str, nargs='?', default=os.getcwd(),
                      help='Name of repository to add')
 
     commit = subparsers.add_parser('commit', help='Commit all uncommitted repositories in the catalogue')
@@ -471,12 +520,31 @@ if __name__ == '__main__':
                      help=DRYRUN
     )
 
+    diff = subparsers.add_parser('diff', help='Print a diff of the changes in each repository')
+    diff.add_argument('-q','--quiet', action='store_true', default=False,
+                        help='List the file changes in all repositories'
+    )
+    diff.add_argument('--shortstat', action='store_true', default=False,
+                      help='Output only the last line of the --stat format'
+    )
+    diff.add_argument('--numstat', action='store_true', default=False,
+                      help='Similar to --stat, but shows number of added and deleted lines without abbreviation'
+    )
+    diff.add_argument('--dirstat', nargs='?', type=str, default=False,
+                        help='Output the distribution of relative amount of changes for each sub-directory'
+    )
+    diff.add_argument('--stat', nargs='?', type=str, default=False,
+                        help='Generate a diffstat using git diff --stat=...'
+    )
 
     git = subparsers.add_parser('git', help='Run git commands on all repositories')
     git.add_argument('commands', type=str, nargs='+', help='')
 
     install = subparsers.add_parser('install', help='Install all repositories in the catalogue')
-    install.add_argument('-v', '--verbose', action='store_true', default=False,
+    install.add_argument('-n','--dry-run', action='store_true', default=False,
+                      help='Do everything except actually send the updates'
+    )
+    install.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='print messages'
     )
 
@@ -485,9 +553,9 @@ if __name__ == '__main__':
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
     pull.add_argument('commands', type=str, nargs='*', help='')
     pull.add_argument('-n','--dry-run', action='store_true', default=False,
-                      help='Do everything except actually send the updates'
+                      help='Print what would be done without doing it'
     )
-    pull.add_argument('-v','--verbose', action='store_true', default=False,
+    pull.add_argument('-q','--quiet', action='store_true', default=False,
                         help='Print messages when pulling each repository')
 
     push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
@@ -495,16 +563,19 @@ if __name__ == '__main__':
     push.add_argument('-n','--dry-run', action='store_true', default=False,
                       help='Do everything except actually send the updates'
     )
-    push.add_argument('-v', '--verbose', action='store_true', default=False,
+    push.add_argument('-q', '--quiet', action='store_true', default=False,
                       help='Print messages each time a repository is pushed')
 
     remove = subparsers.add_parser('remove', help='Remove repository from the catalogue')
+    remove.add_argument('-d', '--delete', action='store_true', default=False,
+                        help='Delete directory as well'
+    )
     remove.add_argument('repository', type=str, nargs='?', default=None,
-                        help='Name of repository to remove')
-
+                        help='Name of repository to remove'
+    )
 
     status = subparsers.add_parser('status', help='Print the status of each repository in the catalogue')
-    status.add_argument('-v','--verbose', action='store_true', default=False,
+    status.add_argument('-q','--quiet', action='store_true', default=False,
                         help='List the file changes in all repositories')
     status.add_argument('-u','--untracked-files', choices=['no', 'normal','all'], default='no',
                         help='Show untracked files using git status mode'
