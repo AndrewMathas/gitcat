@@ -101,6 +101,14 @@ class GitCat:
 
         return False
 
+    def anti_message(self, msg, ending=None):
+        r'''
+        If `self.verbose` is `False` then print `msg` to stdout, with `ending`
+        as the, well, ending. If `self.verbose` is `False` then do nothing.
+        '''
+        if not self.verbose:
+            print(msg, end=ending)
+
     def message(self, msg, ending=None):
         r'''
         If `self.verbose` is `True` then print `msg` to stdout, with `ending`
@@ -285,6 +293,7 @@ class GitCat:
                     if push.returncode == 0:
                         self.message(' - updated')
             if push.returncode != 0:
+                self.anti_message('Checking {}'.format(rep), ending='')
                 print('\n  {}'.format('\n  '.join(push.stderr.decode().split('\n'))))
 
     def remove(self):
