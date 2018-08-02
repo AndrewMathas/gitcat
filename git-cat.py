@@ -199,11 +199,11 @@ class GitCat:
 
         # find the root directory for the repository and the remote URL`
         os.chdir(dir)
-        dir = self.run_command('git root')
-        if dir.returncode != 0:
+        root = self.run_command('git root')
+        if root.returncode != 0:
             self.error_message('{} is not a git repository:\n  {}'.format(
                    dir, 
-                   dir.stderr.decode().replace('\n', '\n  ')
+                   root.stderr.decode().replace('\n', '\n  ')
                 )
             )
 
@@ -215,7 +215,7 @@ class GitCat:
                 )
             )
 
-        dir = self.short_path( dir.stdout.decode().strip() )
+        dir = self.short_path( root.stdout.decode().strip() )
         rep = rep.stdout.decode().strip()
         if dir in self.catalogue:
             # give an error if repository is already in the catalogue
@@ -224,7 +224,7 @@ class GitCat:
             # add current directory to the repository and save
             self.catalogue[dir] = rep
             self.save_catalogue()
-            self.message('Adding {} to the catalgue'.format(dir))
+            self.message('Adding {} to the catalogue'.format(dir))
 
     def commit(self):
         r'''
