@@ -247,15 +247,22 @@ class GitCat:
         r'''
         Install all of the repositories in the catalogue
         '''
-        self.pull(install=True)
+        for rep in self.catalogue:
+            dir = self.expand_path(rep)
+            if not os.path.exists(dir):
+                self.message('Installing {:<{max}}'.format(rep, max=self.max))
+                os.mkdirs(dir)
+                self.run_command('git clone {rep} {dir}'.format(dir=rep, rep=self.catalogue[rep]))
+            if not self.is_git_repository(dir):
+                print('{} is not a git repository!?'.format(rep))
 
-    def list(self, verbose=False):
+    def list(self):
         r'''
         Print the list of repositories
         '''
         print(self.list_catalogue())
 
-    def pull(self, install=False):
+    def pull(self):
         r'''
         Run through all repositories and update them if their directories
         already exist on this computer or if `install==True`
@@ -263,13 +270,11 @@ class GitCat:
         for rep in self.catalogue:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
+                self.message('Updating {:<{max}}'.format(rep, max=self.max))
                 self.run_command('git pull')
 
-            elif install:
-                self.run_command('git clone {rep} {dir}'.format(dir=rep, rep=self.catalogue[rep]))
-
             else:
-                self.message('')
+                print('{} is not a git repository!?'.format(rep))
 
     def push(self):
         r'''
@@ -482,6 +487,8 @@ if __name__ == '__main__':
     pull.add_argument('-n','--dry-run', action='store_true', default=False,
                       help='Do everything except actually send the updates'
     )
+    pull.add_argument('-v','--verbose', action='store_true', default=False,
+                        help='Print messages when pulling each repository')
 
     push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
     push.add_argument('commands', type=str, nargs='*', help='')
