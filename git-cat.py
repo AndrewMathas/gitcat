@@ -26,7 +26,8 @@ def run_command(cmd):
     return run
 
 # regular expression for [ahead 1], or [behind 1] or [ahead # 2, behind 1] in status
-aheadbehind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
+ahead_behind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
+files_changed = re.compile(r'[0-9]+ file(s|) changed')
 
 # ---------------------------------------------------------------------------------------
 
@@ -401,28 +402,41 @@ class GitCat:
         Print the status of all of the repositories in the catalogue
         '''
         status_command = 'git status --branch --short --porcelain --untracked-files={}'.format(self.options.untracked_files)
+        diff_command = 'git diff --shortstat --no-color'
 
         for rep in sorted(self.catalogue.keys()):
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
+
+                # use status to work out relative changes
                 status = run_command(status_command)
                 if status.returncode != 0 or status.stderr != b'':
                     self.error_message('There was an error obtaining the status for {}\n  - {}'.format(dir, status.stderr.decode()))
-                elif status.stdout != b'':
-                    stdout = status.stdout.decode().split('\n')
-                    changes = aheadbehind.search(stdout.pop(0))
-                    if stdout != ['']:
-                        print('{:<{max}} {}\n  - {}'.format(
-                            rep,
-                            '' if changes is None else changes.group()[1:-1],
-                            '\n  - '.join(lin for lin in stdout if lin != ''), max=self.max)
-                        )
-                    elif changes is not None:
-                        print('{:<{max}} {}'.format(rep, changes.group()[1:-1], max=self.max))
-                    else:
-                        self.message('{:<{max}} unchanged'.format(rep, max=self.max))
+
+                stdout = status.stdout.decode().split('\n')
+                stdout.pop(-1) # remove trailing ''
+                changes = ahead_behind.search(stdout.pop(0))
+                changes = '' if changes is None else changes.group()[1:-1]
+
+                # use diff to work out which files have changed
+                diff = run_command(diff_command)
+                if diff.returncode != 0 or diff.stderr != b'':
+                    self.error_message('There was an error obtaining uncommited changes for {}\n  - {}'.format(dir, diff.stderr.decode()))
+                changed = files_changed.search(diff.stdout.decode())
+                changed = '' if changed is None else changed.group()
+
+                if changes != '':
+                    changed += changes if changed=='' else ', '+changes
+
+                if stdout != [] and not self.quiet:
+                    print('{:<{max}} {}\n  - {}'.format(
+                        rep, changed, '\n  - '.join(lin for lin in stdout), 
+                        max=self.max)
+                    )
+                elif changed != '':
+                    print('{:<{max}} {}'.format(rep, changed, max=self.max))
                 else:
-                    print('status = '+status.stdout.decode())
+                    self.message('{:<{max}} unchanged'.format(rep, max=self.max))
 
     def uninstalled(self):
         r'''
