@@ -142,9 +142,9 @@ class GitCat:
         output to stderr from run_command. Return `True` is not warning is
         needed and `False` otherwise
         '''
-        print('Warning: rep={}, action={}, run={}'.format(rep, action,runcommand))
+        #print('Warning: rep={}, action={}, run={}'.format(rep, action,runcommand))
         if runcommand.returncode != 0 or runcommand.stderr != b'':
-            print('{rep}: there was an error using {action}\n  {stderr}'.format(
+            print('{rep}: there was an error using {message}\n  {stderr}'.format(
                 rep=rep,
                 message=action,
                 stderr=runcommand.stderr.decode().replace('\n', '\n  ')
