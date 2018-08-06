@@ -130,12 +130,12 @@ class GitCat:
         r'''
         Return a string that lists the repositories in the catalogue. If
         `listing` is `False` and the repository does not exist then the
-        separator is a asterisk, otherwise it is an equals sign.
+        separator is an exclaimation mark, otherwise it is an equals sign.
         '''
         return '\n'.join('{dir:<{max}} {sep} {rep}'.format(
                 dir=dir,
                 rep=self.catalogue[dir],
-                sep = '=' if listing or self.is_git_repository(self.expand_path(dir)) else '*',
+                sep = '=' if listing or self.is_git_repository(self.expand_path(dir)) else '!',
                 max=self.max)
             for dir in sorted(self.catalogue.keys())
         )
