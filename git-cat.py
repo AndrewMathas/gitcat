@@ -371,6 +371,8 @@ class GitCat:
                     print('problem committing\n  {}'.format(rep, commit.stderr.decode().replace('\n', '\n  ')))
 
                 else:
+                    if commit is None or commit.stdout == b'':
+                        self.message('{:<{max}}'.format(rep, max=self.max), ending='')
                     push = run_command('git push --dry-run --porcelain')
                     if push.returncode != 0:
                         print('problem pushing\n  {}'.format(push.stderr.decode().replace('\n', '\n  ')))
