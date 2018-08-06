@@ -182,7 +182,7 @@ class GitCat:
             self.error_message('there was a problem reading the catalogue file {}'.format(self.filename))
 
         # set the maximum length of a catelogue key
-        self.max = max(len(dir) for dir in sorted(self.catalogue))
+        self.max = max(len(dir) for dir in sorted(self.catalogue)) + 1
 
     def save_catalogue(self):
         r''' 
