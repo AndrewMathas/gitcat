@@ -146,7 +146,7 @@ class GitCat:
         if runcommand.returncode != 0 or runcommand.stderr != b'':
             print('{rep}: there was an error using {action}\n  {stderr}'.format(
                 rep=rep,
-                message=message,
+                message=action,
                 stderr=runcommand.stderr.decode().replace('\n', '\n  ')
             ))
             return False
@@ -285,7 +285,7 @@ class GitCat:
                     else:
                         print('{}\n  {}'.format(rep, '\n  '.join(f for f in diff.stdout.decode().split('\n') if f != '')))
                 else:
-                    self.message('{dir:<{max}} unchanged'.format(dir=rep, max=self.max))
+                    self.message('{dir:<{max}} up to date'.format(dir=rep, max=self.max))
 
     def git(self, commands):
         r''' Run git commands on every repository in the catalogue '''
@@ -370,7 +370,7 @@ class GitCat:
                     push = run_command('git push --dry-run --porcelain')
                     if self.no_warning(rep, "pushing", push):
                         if '[up to date]' in push.stdout.decode():
-                            self.message('unchanged')
+                            self.message('up to date')
 
                         elif not options.dry_run:
                             push = run_command('git push --porcelain')
