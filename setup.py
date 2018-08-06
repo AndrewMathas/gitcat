@@ -40,6 +40,7 @@ setup(name             = settings.program,
 
       packages=find_packages(),
       include_package_data=True,
+      python_requires='>=3',
 
       entry_points     = {'console_scripts': ['git-cat = git-cat:main', ],},
 
@@ -47,8 +48,10 @@ setup(name             = settings.program,
       classifiers      = [
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
-        'Intended Audience :: Science/Research',
+        'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'Natural Language :: English',
         'Programming Language :: Python :: 3.7+',
+        'Topic :: Software Development :: Version Control :: Git'
       ]
 )

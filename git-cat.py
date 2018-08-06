@@ -83,12 +83,15 @@ class GitCat:
         commit message is a list of the files being changed.
         '''
         changed_files = self.changed_files()
+        print('changed files = {}'.format(changed_files))
         if changed_files != '':
             commit_message = 'git cat: updating '+changed_files.strip()
+            print('commit mesage = {}'.format(commit_message))
             if self.options.dry_run:
-                run_command('git commit --dry-run -a --message = "{}"'.format(commit_message))
+                commit = run_command('git commit -a --porcelain --message="{}"'.format(commit_message))
             else:
-                run_command('git commit -a --message = "{}"'.format(commit_message))
+                commit = run_command('git commit -a --message="{}"'.format(commit_message))
+            print('commit = {}'.format(commit))
 
     def error_message(self, err):
         r'''
@@ -324,10 +327,10 @@ class GitCat:
         TODO: trap errors?/conflicts
         '''
         pull_command = 'git pull'
-        for option in ['ff-only', 'strategy', 'stat']:
+        for option in ['ff_only', 'strategy', 'stat']:
             opt = getattr(self.options, option)
             if opt == True or opt == None:
-                pull_command += ' --'+option
+                pull_command += ' --'+option.replace('_','-')
             elif opt != False:
                 pull_command += ' --{} = {}'.format(option, opt)
 
@@ -335,18 +338,16 @@ class GitCat:
             dir = self.expand_path(rep)
             if os.path.isdir(dir):
                 if self.is_git_repository(dir):
-                    self.message('{:<{max}}'.format(rep, max=self.max), ending='')
+                    #self.message('{:<{max}}'.format(rep, max=self.max), ending='')
                     pull = run_command(pull_command)
-                    print('pull = {}'.format(pull))
                     if pull.returncode != 0:
                         self.error_message('There was an error in pulling from {}\n  - {}'.format(rep, pull.stderr.decode()))
-                    elif pull.stdout != b'':
-                        if self.quiet:
-                            print('{rep:<{max}} {pull}'.format(rep=rep, max=self.max, pull=pull.stdout.decode().strip()))
-                        else:
-                            print('{}\n  {}'.format(rep, '\n  '.join(f for f in pull.stdout.decode().split('\n') if f != '')))
+
+                    stdout = pull.stdout.decode()
+                    if stdout == 'Already up to date.\n':
+                        self.message('{rep:<{max}} {pull}'.format(rep=rep, max=self.max, pull=stdout.strip().lower()))
                     else:
-                        self.message('{rep:<{max}} unchanged on remote'.format(rep=rep, max=self.max))
+                        self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in pull.stdout.decode().split('\n') if f != '')))
 
                 else:
                     self.message('{} is not a git repository!?'.format(rep))
@@ -359,7 +360,7 @@ class GitCat:
         TODO: trap errors?/conflicts
         '''
         for rep in self.catalogue:
-            self.message('Checking {:<{max}}'.format(rep, max=self.max), ending='')
+            self.message('{:<{max}}'.format(rep, max=self.max), ending='')
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(dir)
@@ -367,7 +368,7 @@ class GitCat:
             push = run_command('git push --dry-run --porcelain')
             if not options.dry_run:
                 if 'up to date' in push.stdout.decode():
-                    self.message(' - no change')
+                    self.message('unchanged')
                 else:
                     push = run_command('git push --quiet --porcelain')
                     if push.returncode == 0:
@@ -618,7 +619,7 @@ if __name__ == '__main__':
     )
     pull.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='Print messages when pulling each repository')
-    pull.add_argument('--ff-only', action='store_true', default=False,
+    pull.add_argument('-f', '--ff-only', action='store_true', default=False,
                       help='Fast-forward only merge')
     pull.add_argument('-s', '--strategy', nargs='?', type=str, default=False,
                       help='Use the given merge strategy.')
