@@ -126,14 +126,18 @@ class GitCat:
         if not self.quiet:
             print(msg, end=ending)
 
-    def list_catalogue(self):
+    def list_catalogue(self, listing):
         r'''
-        Return a string that lists the repositories in the catalogue.
+        Return a string that lists the repositories in the catalogue. If
+        `listing` is `False` and the repository does not exist then the
+        separator is a asterisk, otherwise it is an equals sign.
         '''
-        return '\n'.join('{dir:<{max}} = {rep}'.format(
-            dir=dir,
-            rep=self.catalogue[dir],
-            max=self.max) for dir in sorted(self.catalogue.keys())
+        return '\n'.join('{dir:<{max}} {sep} {rep}'.format(
+                dir=dir,
+                rep=self.catalogue[dir],
+                sep = '=' if listing or self.is_git_repository(self.expand_path(dir)) else '*',
+                max=self.max)
+            for dir in sorted(self.catalogue.keys())
         )
 
     def no_warning(self, rep, action, runcommand):
@@ -199,7 +203,7 @@ class GitCat:
             catalogue.write('# List of git repositories to sync using gitcat\n\n')
             if self.prefix != os.environ['HOME']:
                 print('prefix = {}\n\n'.format(self.prefix))
-            catalogue.write(self.list_catalogue())
+            catalogue.write(self.list_catalogue(listing=True))
 
     # ---------------------------------------------------------------------------------------
     # Now implement the various commands available from the command line
@@ -210,7 +214,7 @@ class GitCat:
         Add the current repository to the catalogue
         '''
         if self.options.repository.startswith('/'):
-             dir = self.options.repository
+            dir = self.options.repository
         else:
             dir = os.path.join(self.prefix, self.options.repository)
 
@@ -246,6 +250,12 @@ class GitCat:
             self.save_catalogue()
             self.message('Adding {} to the catalogue'.format(dir))
 
+    def cat(self):
+        r'''
+        Print the list of repositories
+        '''
+        print(self.list_catalogue(listing=False))
+
     def commit(self):
         r'''
         Commit all of the repositories in the catalogue where files have
@@ -257,7 +267,6 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
-
 
     def diff(self):
         r'''
@@ -319,18 +328,10 @@ class GitCat:
             if not (self.options.dry_run or self.is_git_repository(dir)):
                 print('{} is not a git repository!?'.format(rep))
 
-    def installed(self):
-        r'''
-        Print the list of repositories
-        '''
-        print(self.list_catalogue())
-
     def pull(self):
         r'''
         Run through all repositories and update them if their directories
         already exist on this computer
-
-        TODO: trap errors?/conflicts
         '''
         pull_command = 'git pull'
         for option in ['ff_only', 'strategy', 'stat']:
@@ -346,7 +347,7 @@ class GitCat:
                 if self.is_git_repository(dir):
                     #self.message('{:<{max}}'.format(rep, max=self.max), ending='')
                     pull = run_command(pull_command)
-                    if no_warning(rep, 'pulling', pull):
+                    if self.no_warning(rep, 'pulling', pull):
                         stdout = pull.stdout.decode()
                         if stdout == 'Already up to date.\n':
                             self.message('{rep:<{max}} {pull}'.format(rep=rep, max=self.max, pull=stdout.strip().lower()))
@@ -357,8 +358,6 @@ class GitCat:
         r'''
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
-
-        TODO: trap errors?/conflicts
         '''
         for rep in self.catalogue:
             dir = self.expand_path(rep)
@@ -371,7 +370,6 @@ class GitCat:
                     if self.no_warning(rep, "pushing", push):
                         if '[up to date]' in push.stdout.decode():
                             self.message('up to date')
-
                         elif not options.dry_run:
                             push = run_command('git push --porcelain')
                             if self.no_warning(rep, 'pushing', push):
@@ -445,15 +443,6 @@ class GitCat:
                     else:
                         self.message('{:<{max}} up to date'.format(rep, max=self.max))
 
-    def uninstalled(self):
-        r'''
-        List the uninstalled repositories in the catalogue
-        '''
-        for rep in self.catalogue:
-            dir = self.expand_path(rep)
-            if not os.path.exists(dir):
-                self.message('{:<{max}} not installed'.format(rep, max=self.max))
-
 # ---------------------------------------------------------------------------------------
 # location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc and
 # then to ~/.gitcatrc
@@ -466,43 +455,6 @@ if not os.path.isfile(RC_FILE):
 DRYRUN = '''Do not create a commit, but show a list of paths that are to be
 committed, paths with local changes that will be left uncommitted and
 paths that are untracked.'''
-
-class _HelpAction(argparse._HelpAction):
-    r'''
-    Override default help and print extendded help for each option.
-    Based, in part, on
-    https://stackoverflow.com/questions/20094215/argparse-subparser-monolithic-help-output
-    '''
-    def __call__(self, parser, namespace, values, option_string=None):
-        parser.print_help()
-        # retrieve subparsers from parser
-        subparsers_actions = [
-            action for action in parser._actions
-            if isinstance(action, argparse._SubParsersAction)]
-        # there will probably only be one subparser_action,
-        # but better safe than sorry
-        m = max(len('{}'.format(choice)) for subparsers_action in subparsers_actions for choice in subparsers_action.choices)
-        for subparsers_action in subparsers_actions:
-            # get all subparsers and print help
-            for choice, subparser in subparsers_action.choices.items():
-                print('{choice:>{max}}|{help}\n\nDESCRIPTION: {description}\n\nFORMAT_USAGE: {uformat}\n\nFORMAT_HELP: {hformat}\n\nPRINT HELP: {phelp}\n\nPRINT USAGE: {pusage}\n\nPROG: {prog}\n\nUSAGE: {usage}\nSUBPARSER: {sub}'.format(
-                          choice=choice,
-                          max=m,
-                          help=subparser.format_help(),
-                          description=subparser.description,
-                          hformat=subparser.format_help(),
-                          uformat=subparser.format_usage(),
-                          prog=subparser.prog,
-                          usage=subparser.usage,
-                          phelp=subparser.print_help(),
-                          pusage=subparser.print_usage(),
-                          sub=dir(subparser)
-                      )
-                )
-
-
-        parser.exit()
-
 
 class CustomHelpFormatter(argparse.HelpFormatter):
 
@@ -562,7 +514,6 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--catalogue', type=str, default=RC_FILE,
                         help='specify the catalogue of bitbucket repositories'
     )
-    #parser.add_argument('-h', '--help', action=_HelpAction, help='show this help message and exit')  # add custom help
     parser.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='print messages'
     )
@@ -616,7 +567,7 @@ if __name__ == '__main__':
                         help='print messages'
     )
 
-    installed = subparsers.add_parser('installed', help='List the installed repositories from the catalogue')
+    installed = subparsers.add_parser('cat', help='List all of the repositories in the catalogue')
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
     pull.add_argument('commands', type=str, nargs='*', help='')
@@ -658,8 +609,6 @@ if __name__ == '__main__':
     status.add_argument('-u', '--untracked-files', choices = ['no', 'normal', 'all'], default='no',
                         help='Show untracked files using git status mode'
     )
-
-    subparsers.add_parser('uninstalled', help='List the uninstalled repositories in the catelogue')
 
     options = parser.parse_args()
     if options.command is None:
