@@ -90,7 +90,7 @@ class GitCat:
             else:
                 commit = run_command('git commit -a --message="{}"'.format(commit_message))
                 if commit.stdout != b'':
-                    self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in pull.stdout.decode().split('\n') if f != '')))
+                    self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in commit.stdout.decode().split('\n') if f != '')))
 
             return commit
 
