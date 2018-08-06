@@ -59,22 +59,13 @@ class GitCat:
         # run corresponding command
         getattr(self, options.command)()
 
-    def changed_files(self):
+    def changed_files(self, rep):
         r'''
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
         '''
         changed = run_command('git diff-index --name-only HEAD')
-        if changed.returncode != 0 or changed.stderr != b'':
-            self.error_message(
-                'There was a problem running git\n {}'.format(
-                    changed.stdout.decode().replace('\n', '\n  ')
-                )
-            )
-
-        if changed.returncode != 0:
-            self.error_message('there was a problem running git')
-
+        self.no_warning(rep, 'diff-index', changed)
         return changed.stdout.decode().replace('\n', ' ')
 
     def commit_repository(self, rep, dir):
@@ -82,15 +73,13 @@ class GitCat:
         Commit the files in the repository with root directory `dir`. The
         commit message is a list of the files being changed.
         '''
-        changed_files = self.changed_files()
+        changed_files = self.changed_files(rep)
         if changed_files != '':
             commit_message = 'git cat: updating '+changed_files.strip()
             if self.options.dry_run:
                 commit = run_command('git commit -a --porcelain --message="{}"'.format(commit_message))
             else:
                 commit = run_command('git commit -a --message="{}"'.format(commit_message))
-                if commit.stdout != b'':
-                    self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in commit.stdout.decode().split('\n') if f != '')))
 
             return commit
 
@@ -146,6 +135,24 @@ class GitCat:
             rep=self.catalogue[dir],
             max=self.max) for dir in sorted(self.catalogue.keys())
         )
+
+    def no_warning(self, rep, action, runcommand):
+        r'''
+        Print a warning message for the repository `rep`. Here `stderr` is the
+        output to stderr from run_command. Return `True` is not warning is
+        needed and `False` otherwise
+        '''
+        #print('Warning: rep={}, action={}, run={}'.format(rep, action,runcommand))
+        if runcommand.returncode != 0 or runcommand.stderr != b'':
+            print('{rep}: there was an error using {action}\n  {stderr}'.format(
+                rep=rep,
+                message=message,
+                stderr=runcommand.stderr.decode().replace('\n', '\n  ')
+            ))
+            return False
+
+        # if no error then return True
+        return True
 
     def short_path(self, dir):
         r'''
@@ -250,8 +257,6 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
-                if commit is not None and commit.returncode != 0:
-                    self.error_message('There was an error committing {}\n  - {}'.format(rep, commit.stderr.decode()))
 
 
     def diff(self):
@@ -273,7 +278,7 @@ class GitCat:
             if self.is_git_repository(dir):
                 diff = run_command(diff_command)
                 if diff.returncode != 0:
-                    self.error_message('There was an error obtaining the diff for {}\n  - {}'.format(dir, diff.stderr.decode()))
+                    self.warning(rep, 'diff-ing', diff)
                 elif diff.stdout != b'':
                     if self.quiet:
                         print('{dir:<{max}} {diff}'.format(dir=rep, max=self.max, diff=diff.stdout.decode().strip()))
@@ -309,10 +314,7 @@ class GitCat:
                 os.chdir(parent)
                 if not self.options.dry_run:
                     install = run_command('git clone --quiet {rep} {dir}'.format(dir=os.path.basename(dir), rep=self.catalogue[rep]))
-                    if install.returncode != 0 or install.stderr != b'':
-                        self.quiet_message('Installing {:<{max}}'.format(rep, max=self.max))
-                        print('  {}'.format(install.stderr.decode().replace('\n', '\n  ')))
-                    else:
+                    if self.no_warning(rep, 'clone', install):
                         self.message(' - done!')
             if not (self.options.dry_run or self.is_git_repository(dir)):
                 print('{} is not a git repository!?'.format(rep))
@@ -344,17 +346,12 @@ class GitCat:
                 if self.is_git_repository(dir):
                     #self.message('{:<{max}}'.format(rep, max=self.max), ending='')
                     pull = run_command(pull_command)
-                    if pull.returncode != 0:
-                        self.error_message('There was an error in pulling from {}\n  - {}'.format(rep, pull.stderr.decode()))
-
-                    stdout = pull.stdout.decode()
-                    if stdout == 'Already up to date.\n':
-                        self.message('{rep:<{max}} {pull}'.format(rep=rep, max=self.max, pull=stdout.strip().lower()))
-                    else:
-                        self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in pull.stdout.decode().split('\n') if f != '')))
-
-                else:
-                    self.message('{} is not a git repository!?'.format(rep))
+                    if no_warning(rep, 'pulling', pull):
+                        stdout = pull.stdout.decode()
+                        if stdout == 'Already up to date.\n':
+                            self.message('{rep:<{max}} {pull}'.format(rep=rep, max=self.max, pull=stdout.strip().lower()))
+                        else:
+                            self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in pull.stdout.decode().split('\n') if f != '')))
 
     def push(self):
         r'''
@@ -367,29 +364,22 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
-                if commit is not None and commit.returncode != 0:
-                    print('problem committing\n  {}'.format(rep, commit.stderr.decode().replace('\n', '\n  ')))
-
-                else:
+                if commit is None or self.no_warning(rep, 'committing', commit):
                     if commit is None or commit.stdout == b'':
                         self.message('{:<{max}}'.format(rep, max=self.max), ending='')
                     push = run_command('git push --dry-run --porcelain')
-                    if push.returncode != 0:
-                        print('problem pushing\n  {}'.format(push.stderr.decode().replace('\n', '\n  ')))
+                    if self.no_warning(rep, "pushing", push):
+                        if '[up to date]' in push.stdout.decode():
+                            self.message('unchanged')
 
-                    elif '[up to date]' in push.stdout.decode():
-                        self.message('unchanged')
-
-                    elif not options.dry_run:
-                        push = run_command('git push --porcelain')
-                        if push.returncode != 0:
-                            print('problem pushing\n  {}'.format(push.stderr.decode().replace('\n', '\n  ')))
-                        else:
-                            stdout = push.stdout.decode().strip()
-                            if stdout.startswith('To ') and stdout.endswith('Done'):
-                                self.message('pushed')
-                            else:
-                                self.message('pushed\n  {}'.format(stdout.replace('\n','\n  ')))
+                        elif not options.dry_run:
+                            push = run_command('git push --porcelain')
+                            if self.no_warning(rep, 'pushing', push):
+                                stdout = push.stdout.decode().strip()
+                                if stdout.startswith('To ') and stdout.endswith('Done'):
+                                    self.message('pushed')
+                                else:
+                                    self.message('pushed\n  {}'.format(stdout.replace('\n','\n  ')))
 
     def remove(self):
         r'''
@@ -423,35 +413,37 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
 
+                # update  wit remote, unless local is true
+                if not self.options.local:
+                    remote = run_command('git remote update')
+                    self.no_warning(rep, 'updating', remote)
+
                 # use status to work out relative changes
                 status = run_command(status_command)
-                if status.returncode != 0 or status.stderr != b'':
-                    self.error_message('There was an error obtaining the status for {}\n  - {}'.format(dir, status.stderr.decode()))
+                if self.no_warning(rep, 'status', status):
+                    stdout = status.stdout.decode().split('\n')
+                    stdout.pop(-1) # remove trailing ''
+                    changes = ahead_behind.search(stdout.pop(0))
+                    changes = '' if changes is None else changes.group()[1:-1]
 
-                stdout = status.stdout.decode().split('\n')
-                stdout.pop(-1) # remove trailing ''
-                changes = ahead_behind.search(stdout.pop(0))
-                changes = '' if changes is None else changes.group()[1:-1]
+                    # use diff to work out which files have changed
+                    diff = run_command(diff_command)
+                    if self.no_warning(rep, 'diff', diff):
+                        changed = files_changed.search(diff.stdout.decode())
+                        changed = '' if changed is None else changed.group()
 
-                # use diff to work out which files have changed
-                diff = run_command(diff_command)
-                if diff.returncode != 0 or diff.stderr != b'':
-                    self.error_message('There was an error obtaining uncommited changes for {}\n  - {}'.format(dir, diff.stderr.decode()))
-                changed = files_changed.search(diff.stdout.decode())
-                changed = '' if changed is None else changed.group()
+                    if changes!='':
+                        changed += changes if changed=='' else ', '+changes
 
-                if changes != '':
-                    changed += changes if changed=='' else ', '+changes
-
-                if stdout != [] and not self.quiet:
-                    print('{:<{max}} {}\n  - {}'.format(
-                        rep, changed, '\n  - '.join(lin for lin in stdout), 
-                        max=self.max)
-                    )
-                elif changed != '':
-                    print('{:<{max}} {}'.format(rep, changed, max=self.max))
-                else:
-                    self.message('{:<{max}} unchanged'.format(rep, max=self.max))
+                    if stdout!=[] and not self.quiet:
+                        print('{:<{max}} {}\n  {}'.format(
+                            rep, changed, '\n  '.join(lin for lin in stdout), 
+                            max=self.max)
+                        )
+                    elif changed!='':
+                        print('{:<{max}} {}'.format(rep, changed, max=self.max))
+                    else:
+                        self.message('{:<{max}} up to date'.format(rep, max=self.max))
 
     def uninstalled(self):
         r'''
@@ -657,6 +649,9 @@ if __name__ == '__main__':
     )
 
     status = subparsers.add_parser('status', help='Print the status of each repository in the catalogue')
+    status.add_argument('-l', '--local', action='store_true', default=False,
+                        help='Only compare with local repositories'
+    )
     status.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='Only list changes the repositories'
     )
