@@ -386,6 +386,7 @@ class GitCat:
                         elif push.stdout.decode().startswith('To '+self.catalogue[rep]):
                             self.message('updated')
                         else:
+                            print('push = {}'.format(push))
                             self.message('updated\n {}'.format(push.stdout.decode().replace('\n','\n ')))
 
     def remove(self):
