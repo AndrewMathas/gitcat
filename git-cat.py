@@ -374,13 +374,18 @@ class GitCat:
                 else:
                     push = run_command('git push --dry-run --porcelain')
                     if push.returncode != 0:
-                        print('problem pushing\n  {}'.format(push.stderr.decode().raplace('\n', '\n  ')))
+                        print('problem pushing\n  {}'.format(push.stderr.decode().replace('\n', '\n  ')))
+
+                    elif '[up to date]' in push.stdout.decode():
+                        self.message('unchanged')
 
                     elif not options.dry_run:
-                        if 'Everything up-to-date' in push.stdout.decode():
-                            self.message('unchanged')
+                        push = run_command('git push --porcelain')
+                        if push.returncode != 0:
+                            print('problem pushing\n  {}'.format(push.stderr.decode().replace('\n', '\n  ')))
+                        elif 'Everything up-to-date' in push.stdout.decode():
+                            self.message('updated')
                         else:
-                            push = run_command('git push')
                             self.message('updated\n {}'.format(push.stdout.decode().replace('\n','\n ')))
 
     def remove(self):
