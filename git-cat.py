@@ -383,7 +383,7 @@ class GitCat:
                         push = run_command('git push --porcelain')
                         if push.returncode != 0:
                             print('problem pushing\n  {}'.format(push.stderr.decode().replace('\n', '\n  ')))
-                        elif 'Everything up-to-date' in push.stdout.decode():
+                        elif push.stdout.decode().startswith('To '+self.catalogue[rep]):
                             self.message('updated')
                         else:
                             self.message('updated\n {}'.format(push.stdout.decode().replace('\n','\n ')))
