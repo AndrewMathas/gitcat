@@ -77,21 +77,22 @@ class GitCat:
 
         return changed.stdout.decode().replace('\n', ' ')
 
-    def commit_repository(self, dir):
+    def commit_repository(self, rep, dir):
         r'''
         Commit the files in the repository with root directory `dir`. The
         commit message is a list of the files being changed.
         '''
         changed_files = self.changed_files()
-        print('changed files = {}'.format(changed_files))
         if changed_files != '':
             commit_message = 'git cat: updating '+changed_files.strip()
-            print('commit mesage = {}'.format(commit_message))
             if self.options.dry_run:
                 commit = run_command('git commit -a --porcelain --message="{}"'.format(commit_message))
             else:
                 commit = run_command('git commit -a --message="{}"'.format(commit_message))
-            print('commit = {}'.format(commit))
+                if commit.stdout != b'':
+                    self.message('{}\n  {}'.format(rep, '\n  '.join(f for f in pull.stdout.decode().split('\n') if f != '')))
+
+            return commit
 
     def error_message(self, err):
         r'''
@@ -248,7 +249,10 @@ class GitCat:
         for rep in self.catalogue:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
-                self.commit_repository(dir)
+                commit = self.commit_repository(rep, dir)
+                if commit is not None and commit.returncode != 0:
+                    self.error_message('There was an error committing {}\n  - {}'.format(rep, commit.stderr.decode()))
+
 
     def diff(self):
         r'''
@@ -363,19 +367,22 @@ class GitCat:
             self.message('{:<{max}}'.format(rep, max=self.max), ending='')
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
-                self.commit_repository(dir)
+                commit = self.commit_repository(rep, dir)
+                if commit is not None and commit.returncode != 0:
+                    print('problem committing\n  {}'.format(rep, commit.stderr.decode().replace('\n', '\n  ')))
 
-            push = run_command('git push --dry-run --porcelain')
-            if not options.dry_run:
-                if 'up to date' in push.stdout.decode():
-                    self.message('unchanged')
                 else:
-                    push = run_command('git push --quiet --porcelain')
-                    if push.returncode == 0:
-                        self.message(' - updated')
-            if push.returncode != 0:
-                self.quiet_message('Checking {}'.format(rep), ending='')
-                print('\n  {}'.format('\n  '.join(push.stderr.decode().split('\n'))))
+                    push = run_command('git push --dry-run --porcelain')
+                    if push.returncode != 0:
+                        print('problem pushing\n  {}'.format(push.stderr.decode().raplace('\n', '\n  ')))
+
+                    elif not options.dry_run:
+                        if 'up to date' in push.stdout.decode():
+                            self.message('unchanged')
+                        else:
+                            push = run_command('git push --quiet --porcelain')
+                            if push.returncode == 0:
+                                self.message(' - updated')
 
     def remove(self):
         r'''
