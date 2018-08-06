@@ -364,7 +364,6 @@ class GitCat:
         TODO: trap errors?/conflicts
         '''
         for rep in self.catalogue:
-            self.message('{:<{max}}'.format(rep, max=self.max), ending='')
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
