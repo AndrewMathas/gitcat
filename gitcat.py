@@ -424,7 +424,7 @@ class GitCat:
                     if push:
                         if '[up to date]' in push.stdout:
                             self.message('up to date')
-                        elif options.dry_run:
+                        elif self.options.dry_run:
                             self.rep_message(
                                 rep,
                                 'dry-run\n {}'.format(push.stdout.replace('\n','\n  '))
