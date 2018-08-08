@@ -424,6 +424,7 @@ class GitCat:
         exist on this computer. Commit the repository if it has changes
         '''
         for rep in self.catalogue:
+            Debugging('pushing {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
@@ -577,7 +578,7 @@ class CustomHelpFormatter(argparse.HelpFormatter):
         return format
 
 import itertools
-class CollectUnknown(argparse.Action):
+class CollectArguments(argparse.Action):
     r'''
     Collect all unknown arguments. Anwer by Jiří J on
         https://stackoverflow.com/questions/33432648/
@@ -675,8 +676,8 @@ def main():
     )
 
 #    git = subparsers.add_parser(
-#        'git', 
-#        action = CollectUnknown,
+#        'git',
+#        action = CollectArguments,
 #        help='Run git commands on all repositories'
 #    )
 
