@@ -36,7 +36,7 @@ class Git:
     """
     def __init__(self, rep, command, options=None):
         # run command
-        print('{}: git {}'.format(rep, command))
+        print('{}: git {} {}'.format(rep, command, options))
         git = subprocess.run(
                 'git {} {}'.format(command, options).strip(),
                 shell=True,
