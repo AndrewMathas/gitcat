@@ -122,10 +122,9 @@ class GitCat:
         changed_files = self.changed_files(rep)
         if changed_files != '':
             commit_message = 'git cat: updating '+changed_files.strip()
-            commit =  '-a --porcelain --message="{}"'.format(commit_message)
+            commit =  '-a --message="{}"'.format(commit_message)
             if self.options.dry_run:
-                commit += ' --dry-run'
-            c= Git(rep, 'commit', commit)
+                commit += ' --porcelain'
             return Git(rep, 'commit', commit)
         # return False as nothing was committed
         return False
@@ -392,11 +391,11 @@ class GitCat:
                 if pull:
                     stdout = pull.stdout
                     if stdout == 'Already up to date.\n':
-                        self.rep_message(rep, stdout.strip().lower()))
+                        self.rep_message(rep, stdout.strip().lower())
                     else:
                         self.rep_message(
-                                rep,
-                                '\n  '.join(f for f in stdout.split('\n') if f != ''))
+                            rep,
+                            '\n  '.join(f for f in stdout.split('\n') if f != '')
                         )
             else:
                 self.rep_message(rep, 'not installed')
