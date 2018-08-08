@@ -61,17 +61,7 @@ class Git:
 
     def __bool__(self):
         ''' return 'self.is_ok` '''
-        print('bool returning {}'.format(self.git_command_ok))
         return self.git_command_ok
-
-    def print_stdout(self):
-        r'''
-        Print `self.stdout` with each line indented two spaces.
-        '''
-        print('{}\n  {}'.format(
-             self.rep,
-             '\n  '.join(s for s in self.stdout.split('\n') if s != ''))
-        )
 
 # ---------------------------------------------------------------------------------------
 # regular expression for [ahead 1], or [behind 1] or [ahead # 2, behind 1] in status
