@@ -16,6 +16,24 @@ import subprocess
 import sys
 
 # ---------------------------------------------------------------------------------------
+# settings
+class Settings(dict):
+    r"""
+    A dummy class for reading and storing key-value pairs that are read from a file
+    """
+    def __init__(self, filename):
+        with open(filename,'r') as meta:
+            for line in meta:
+                key, val = line.split('=')
+                if len(key.strip())>0:
+                    setattr(self, key.strip().lower(), val.strip())
+    def Version(self):
+        return 'git cat version {}'.format(self.version)
+
+settings = Settings('gitcat.ini')
+
+# ---------------------------------------------------------------------------------------
+# running git commands using subprocess
 class Git:
     """
     Container class for running a git command and printing an
@@ -545,6 +563,36 @@ class CustomHelpFormatter(argparse.HelpFormatter):
                 return (result, ) * tuple_size
         return format
 
+import itertools
+class CollectUnknown(argparse.Action):
+    r'''
+    Collect all unknown arguments. Anwer by Jiří J on
+        https://stackoverflow.com/questions/33432648/
+    '''
+    def __init__(self, option_strings, dest, nargs=None, *args, **kwargs):
+        nargs = argparse.REMAINDER
+        super().__init__(option_strings, dest, nargs, *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        def all_opt_strings(parser):
+            nested = (x.option_strings for x in parser._actions
+                      if x.option_strings)
+            return itertools.chain.from_iterable(nested)
+
+        all_opts = list(all_opt_strings(parser))
+
+        collected = []
+        while len(values) > 0:
+            if values[0] in all_opts:
+                break
+            collected.append(values.pop(0))
+        setattr(namespace, self.dest, collected)
+
+        _, extras = parser._parse_known_args(values, namespace)
+        try:
+            getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(extras)
+        except AttributeError:
+            setattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR, extras)
 
 if __name__ == '__main__':
 
@@ -561,11 +609,17 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--catalogue', type=str, default=RC_FILE,
                         help='specify the catalogue of bitbucket repositories'
     )
+    parser.add_argument('-p', '--prefix', type=str, default=os.environ['HOME'],
+                        help='Prefix directory name containing all repositories'
+    )
     parser.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='print messages'
     )
-    parser.add_argument('-p', '--prefix', type=str, default=os.environ['HOME'],
-                        help='Prefix directory name containing all repositories'
+    parser.add_argument(
+            '-v', '--version',
+            action='version',
+            version=settings.Version(),
+            help=argparse.SUPPRESS
     )
 
     subparsers = parser.add_subparsers(help='Subcommand to run', dest='command')
@@ -598,10 +652,11 @@ if __name__ == '__main__':
                         help='Generate a diffstat using git diff --stat = ...'
     )
 
-    git = subparsers.add_parser('git', help='Run git commands on all repositories')
-    git.add_argument('git', type=str, nargs='+',
-                     help='Run git command on each repository'
-    )
+#    git = subparsers.add_parser(
+#        'git', 
+#        action = CollectUnknown,
+#        help='Run git commands on all repositories'
+#    )
 
     install = subparsers.add_parser('install', help='Install all repositories in the catalogue')
     install.add_argument('install_reps', type=str, nargs='?',
