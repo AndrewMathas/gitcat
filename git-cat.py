@@ -411,10 +411,7 @@ class GitCat:
                         elif not options.dry_run:
                             push = Git(rep, 'push', '--porcelain')
                             if push:
-                                if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
-                                    self.message('pushed')
-                                else:
-                                    self.message('pushed\n  {}'.format(push.stdout.replace('\n','\n  ')))
+                                self.message('pushed\n  {}'.format(push.stdout.replace('\n','\n  ')))
             else:
                 self.rep_message(rep, 'not on system')
 
