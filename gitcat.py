@@ -51,6 +51,7 @@ class Git:
      - returncode the return code from the subprocess command
      - stdout     the output from the subprocess command
      - stdout     the stderr from the subprocess command
+     Both stdout and stderr are decoded and stripped.
     """
     def __init__(self, rep, command, options=None):
         # run command
@@ -424,7 +425,7 @@ class GitCat:
                     if push:
                         if '[up to date]' in push.stdout:
                             self.message('up to date')
-                        elif options.dry_run:
+                        elif self.options.dry_run:
                             self.rep_message(
                                 rep,
                                 'dry-run\n {}'.format(push.stdout.replace('\n','\n  '))
@@ -484,7 +485,6 @@ class GitCat:
                 status = Git(rep, 'status', status_options)
                 if status:
                     stdout = status.stdout.split('\n')
-                    stdout.pop(-1) # remove trailing ''
                     changes = ahead_behind.search(stdout.pop(0))
                     changes = '' if changes is None else changes.group()[1:-1]
 
