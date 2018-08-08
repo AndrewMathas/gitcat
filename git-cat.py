@@ -142,7 +142,8 @@ class GitCat:
         '''
         if os.path.isdir(dir):
             os.chdir(dir)
-            is_git = Git(dir, 'rev-parse', '--is-inside-work-tree')
+            rep = dir.replace(self.prefix, '')
+            is_git = Git(rep, 'rev-parse', '--is-inside-work-tree')
             return is_git.returncode == 0 and 'true' in is_git.stdout
 
         return False
