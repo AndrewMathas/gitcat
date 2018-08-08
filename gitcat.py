@@ -67,7 +67,6 @@ class Git:
                 capture_output=True
         )
 
-        Debugging('Git command = {}'.format(git))
         # store the output
         self.rep=rep
         self.returncode = git.returncode
@@ -85,9 +84,20 @@ class Git:
         else:
             self.git_command_ok = True
 
+        Debugging('{}'.format(self))
+
     def __bool__(self):
         ''' return 'self.is_ok` '''
         return self.git_command_ok
+
+    def _repr_(self):
+        return 'Git({})\n  OK = {} returncode = {}\n  stdout: {}\n stderr:{}'.format(
+                self.git,
+                self.git_command_ok,
+                self.returncode,
+                self.stdout.replace('\n','\n        '),
+                self.stderrr.replace('\n','\n        ')
+        )
 
 # ---------------------------------------------------------------------------------------
 # regular expression for [ahead 1], or [behind 1] or [ahead # 2, behind 1] in status
