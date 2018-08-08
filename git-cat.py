@@ -236,7 +236,7 @@ class GitCat:
         If `self.quiet` is `True` then print `msg` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
-        if not(quiet or self.quiet):
+        if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, msg, max=self.max, end=ending))
 
     # ---------------------------------------------------------------------------------------
