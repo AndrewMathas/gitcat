@@ -437,7 +437,7 @@ class GitCat:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     self.rep_message(rep, 'pushed')
                                 else:
-                                    self.rep_message(rep, 'pushed\n  {}'.format(stdout.replace('\n','\n  ')))
+                                    self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n','\n  ')))
 
                 else:
                     self.rep_message(rep, 'no changes')
