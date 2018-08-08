@@ -64,8 +64,8 @@ class Git:
         # store the output
         self.rep=rep
         self.returncode = git.returncode
-        self.stderr = git.stderr.decode()
-        self.stdout = git.stdout.decode()
+        self.stderr = git.stderr.decode().strip()
+        self.stdout = git.stdout.decode().strip()
 
         if self.returncode != 0 or self.stderr != '':
             print('{}: there was an error using {}\n  {}\n{}'.format(
@@ -292,8 +292,8 @@ class GitCat:
                 )
             )
 
-        dir = self.short_path(root.stdout.strip())
-        rep = rep.stdout.strip()
+        dir = self.short_path(root.stdout)
+        rep = rep.stdout
         if dir in self.catalogue:
             # give an error if repository is already in the catalogue
             self.error_message('the git repository in {} is already in the catalogue'.format(dir))
@@ -401,7 +401,7 @@ class GitCat:
                 if pull:
                     stdout = pull.stdout
                     if stdout == 'Already up to date.\n':
-                        self.rep_message(rep, stdout.strip().lower())
+                        self.rep_message(rep, stdout.lower())
                     else:
                         self.rep_message(
                             rep,
