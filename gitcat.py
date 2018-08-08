@@ -32,6 +32,12 @@ class Settings(dict):
 
 settings = Settings(os.path.join(os.path.dirname(__file__),'gitcat.ini'))
 
+debugging = False
+def Debugging(message):
+    """ print a debugging message if `debugging` is true"""
+    if debugging:
+        print(message)
+
 # ---------------------------------------------------------------------------------------
 # running git commands using subprocess
 class Git:
@@ -61,6 +67,7 @@ class Git:
                 capture_output=True
         )
 
+        Debugging('Git command = {}'.format(git))
         # store the output
         self.rep=rep
         self.returncode = git.returncode
@@ -235,29 +242,29 @@ class GitCat:
     # messages
     # ---------------------------------------------------------------------------------------
 
-    def message(self, msg, ending=None):
+    def message(self, message, ending=None):
         r'''
-        If `self.quiet` is `True` then print `msg` to stdout, with `ending`
+        If `self.quiet` is `True` then print `message` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
         if not self.quiet:
-            print(msg, end=ending)
+            print(message, end=ending)
 
-    def quiet_message(self, msg, ending=None):
+    def quiet_message(self, message, ending=None):
         r'''
-        If `self.quiet` is `False` then print `msg` to stdout, with `ending`
+        If `self.quiet` is `False` then print `message` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `True` then do nothing.
         '''
         if self.quiet:
-            print(msg, end=ending)
+            print(message, end=ending)
 
-    def rep_message(self, rep, msg='', quiet=True, ending=None):
+    def rep_message(self, rep, message='', quiet=True, ending=None):
         r'''
-        If `self.quiet` is `True` then print `msg` to stdout, with `ending`
+        If `self.quiet` is `True` then print `message` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
         if not(quiet and self.quiet):
-            print('{:<{max}} {}'.format(rep, msg, max=self.max, end=ending))
+            print('{:<{max}} {}'.format(rep, message, max=self.max, end=ending))
 
     # ---------------------------------------------------------------------------------------
     # Now implement the git cat commands available from the command line
@@ -547,10 +554,10 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 
         elif type(action) == argparse._SubParsersAction:
             # process subcommand help section
-            msg = '\n'
+            message = '\n'
             for subaction in action._get_subactions():
-                msg += self._format_action(subaction)
-            return msg
+                message += self._format_action(subaction)
+            return message
         else:
             return super(CustomHelpFormatter, self)._format_action(action)
 
@@ -602,6 +609,8 @@ class CollectUnknown(argparse.Action):
 
 # ---------------------------------------------------------------------------------------
 def main():
+    # allow the command line options to change the debugging flag
+    global debugging
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
@@ -621,6 +630,12 @@ def main():
     )
     parser.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='print messages'
+    )
+    parser.add_argument(
+            '--debugging',
+            action='store_true',
+            default=False,
+            help=argparse.SUPPRESS
     )
     parser.add_argument(
             '-v', '--version',
@@ -720,6 +735,7 @@ def main():
     )
 
     options = parser.parse_args()
+    debugging = options.debugging
     if options.command is None:
         parser.print_help()
         sys.exit(1)
