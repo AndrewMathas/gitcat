@@ -90,13 +90,13 @@ class Git:
         ''' return 'self.is_ok` '''
         return self.git_command_ok
 
-    def _repr_(self):
+    def __repr__(self):
         return 'Git({})\n  OK = {} returncode = {}\n  stdout: {}\n stderr:{}'.format(
                 self.git,
                 self.git_command_ok,
                 self.returncode,
                 self.stdout.replace('\n','\n        '),
-                self.stderrr.replace('\n','\n        ')
+                self.stderr.replace('\n','\n        ')
         )
 
 # ---------------------------------------------------------------------------------------
