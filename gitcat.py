@@ -66,6 +66,7 @@ class Git:
         self.returncode = git.returncode
         self.stderr = git.stderr.decode().strip()
         self.stdout = git.stdout.decode().strip()
+        self.git = git
 
         if self.returncode != 0 or self.stderr != '':
             print('{}: there was an error using {}\n  {}\n'.format(
@@ -119,23 +120,24 @@ class GitCat:
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
         '''
-        return Git(rep, 'diff-index', '--name-only HEAD').stdout.replace('\n', ' ')
+        return Git(rep, 'diff-index', '--name-only HEAD')
 
     def commit_repository(self, rep, dir):
         r'''
-        Commit the files in the repository with root directory `dir`. The
-        commit message is a list of the files being changed. Return either the
-        Git() record of the committ or False, if nothing was committed.
+        Commit the files in the repository with root directory `dir`.
+        The commit message is a list of the files being changed. Return
+        the Git() record of the commit.
         '''
         changed_files = self.changed_files(rep)
-        if changed_files != '':
-            commit_message = 'git cat: updating '+changed_files.strip()
+        if changed_files and changed_files.stdout != '':
+            commit_message = 'git cat: updating '+changed_files.stdout.replace('\n', ' ')
             commit =  '-a --message="{}"'.format(commit_message)
             if self.options.dry_run:
                 commit += ' --porcelain'
             return Git(rep, 'commit', commit)
         # return False as nothing was committed
-        return False
+        changed_files.git_command_ok = False
+        return changed_files
 
     def error_message(self, err):
         r'''
@@ -418,6 +420,7 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
+                print('git commit: {}'.format(commit.git))
                 if commit:
                     if commit.stdout == '':
                         self.rep_message(rep)
