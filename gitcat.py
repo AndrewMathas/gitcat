@@ -157,6 +157,7 @@ class GitCat:
                 commit += ' --porcelain'
             return Git(rep, 'commit', commit)
 
+
         return changed_files
 
     def error_message(self, err):
@@ -447,15 +448,12 @@ class GitCat:
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
                 if commit:
-                    if commit.stdout == '':
-                        self.rep_message(rep)
                     push = Git(rep, 'push', '--dry-run --porcelain')
                     if push:
                         if '[up to date]' in push.stdout:
-                            self.message('up to date')
+                            self.rep_message(rep, 'up to date')
                         elif self.options.dry_run:
-                            self.rep_message(
-                                rep,
+                            self.rep_message(rep,
                                 'dry-run\n {}'.format(push.stdout.replace('\n','\n  '))
                             )
                         else:
