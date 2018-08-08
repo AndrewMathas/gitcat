@@ -156,8 +156,7 @@ class GitCat:
             if self.options.dry_run:
                 commit += ' --porcelain'
             return Git(rep, 'commit', commit)
-        # return False as nothing was committed
-        changed_files.git_command_ok = False
+
         return changed_files
 
     def error_message(self, err):
