@@ -420,7 +420,6 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
-                print('git commit: {}'.format(commit.git))
                 if commit:
                     if commit.stdout == '':
                         self.rep_message(rep)
