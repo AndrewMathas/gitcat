@@ -72,6 +72,7 @@ class Git:
         self.returncode = git.returncode
         self.stderr = git.stderr.decode().strip()
         self.stdout = git.stdout.decode().strip()
+        self.command = rep + ': ' + command + options
         self.git = git
 
         if self.returncode != 0 or self.stderr != '':
@@ -91,8 +92,9 @@ class Git:
         return self.git_command_ok
 
     def __repr__(self):
+        """ define a __repr__ method for debugging """
         return 'Git({})\n  OK = {} returncode = {}\n  stdout: {}\n stderr:{}'.format(
-                self.git,
+                self.command,
                 self.git_command_ok,
                 self.returncode,
                 self.stdout.replace('\n','\n        '),
