@@ -60,6 +60,8 @@ class Git:
         else:
             self.git_command_ok = True
 
+        print(' -- {}'.format(self.git_command_ok))
+
     def __bool__(self):
         ''' return 'self.is_ok` '''
         return self.git_command_ok
