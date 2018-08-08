@@ -230,13 +230,13 @@ class GitCat:
         if self.quiet:
             print(msg, end=ending)
 
-    def rep_message(self, rep, msg='', quiet=False, ending=None):
+    def rep_message(self, rep, msg='', quiet=True, ending=None):
         r'''
         If `self.quiet` is `True` then print `msg` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
         print('{}-rep message: {} {} {}'.format(rep, quiet, self.quiet, msg))
-        if not(quiet or self.quiet):
+        if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, msg, max=self.max, end=ending))
 
     # ---------------------------------------------------------------------------------------
