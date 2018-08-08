@@ -36,7 +36,7 @@ class Git:
     """
     def __init__(self, rep, command, options=None):
         # run command
-        print('{}: git {} {}'.format(rep, command, options))
+        #print('{}: git {} {}'.format(rep, command, options))
         git = subprocess.run(
                 'git {} {}'.format(command, options).strip(),
                 shell=True,
@@ -59,8 +59,6 @@ class Git:
             self.git_command_ok = False
         else:
             self.git_command_ok = True
-
-        print(' -- {}'.format(self.git_command_ok))
 
     def __bool__(self):
         ''' return 'self.is_ok` '''
@@ -239,7 +237,6 @@ class GitCat:
         If `self.quiet` is `True` then print `msg` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
-        print('{}-rep message: {} {} {}'.format(rep, quiet, self.quiet, msg))
         if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, msg, max=self.max, end=ending))
 
@@ -393,7 +390,7 @@ class GitCat:
                             '\n  '.join(f for f in stdout.split('\n') if f != '')
                         )
             else:
-                self.rep_message(rep, 'not installed')
+                self.rep_message(rep, 'not on system')
 
     def push(self):
         r'''
@@ -419,7 +416,7 @@ class GitCat:
                                 else:
                                     self.message('pushed\n  {}'.format(push.stdout.replace('\n','\n  ')))
             else:
-                self.rep_message(rep, 'not installed')
+                self.rep_message(rep, 'not on system')
 
     def remove(self):
         r'''
@@ -468,18 +465,19 @@ class GitCat:
                     changes = '' if changes is None else changes.group()[1:-1]
 
                     # use diff to work out which files have changed
+                    changed = ''
                     diff = Git(rep, 'diff', diff_options)
                     if diff:
                         changed = files_changed.search(diff.stdout)
                         changed = '' if changed is None else changed.group()
 
-                        if changed != '':
-                            changes += ', '+changes
+                    if changes!='':
+                        changed += changes if changed=='' else ', '+changes
 
                     if stdout != [] and not self.quiet:
                         self.rep_message(
                             rep,
-                            '{}\n  {}'.format(changes, '\n  '.join(lin for lin in stdout)),
+                            '{}\n  {}'.format(changed, '\n  '.join(lin for lin in stdout)),
                             quiet=False
                         )
                     elif changes != '':
@@ -488,7 +486,7 @@ class GitCat:
                         self.rep_message(rep, 'up to date')
 
             else:
-                self.rep_message(rep, 'not installed')
+                self.rep_message(rep, 'not on system')
 
 # ---------------------------------------------------------------------------------------
 # location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc and
