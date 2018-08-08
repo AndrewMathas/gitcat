@@ -135,6 +135,7 @@ class GitCat:
         The commit message is a list of the files being changed. Return
         the Git() record of the commit.
         '''
+        Debugging('COMMIT REP +'+rep)
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.stdout != '':
             commit_message = 'git cat: updating '+changed_files.stdout.replace('\n', ' ')
@@ -325,6 +326,7 @@ class GitCat:
         well.
         '''
         for rep in self.catalogue:
+            Debugging('COMMITTING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(rep, dir)
@@ -344,6 +346,7 @@ class GitCat:
 
         options += ' HEAD'
         for rep in sorted(self.catalogue.keys()):
+            Debugging('DIFFING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 diff = Git(rep, 'diff' 'options')
@@ -361,6 +364,7 @@ class GitCat:
         r''' Run git commands on every repository in the catalogue '''
         git_command = '{}'.format(' '.join(cmd for cmd in commands))
         for rep in self.catalogue:
+            Debugging('GITTING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 print('Repository = {}, command = {}'.format(rep, git_command))
@@ -376,6 +380,7 @@ class GitCat:
             reps_to_install = self.catalogue.keys()
 
         for rep in reps_to_install:
+            Debugging('INSTALLING '+rep)
             dir = self.expand_path(rep)
             if not os.path.exists(dir):
                 self.rep_message(rep, 'installing')
@@ -403,6 +408,7 @@ class GitCat:
                 options += ' --{}={}'.format(option, opt)
 
         for rep in self.catalogue:
+            Deugging('PULLNG '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 pull = Git(rep, 'pull', options)
@@ -424,7 +430,7 @@ class GitCat:
         exist on this computer. Commit the repository if it has changes
         '''
         for rep in self.catalogue:
-            Debugging('PUSHING {}'.format(rep))
+            Debugging('PUSHING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
@@ -484,6 +490,7 @@ class GitCat:
         diff_options = '--shortstat --no-color'
 
         for rep in sorted(self.catalogue.keys()):
+            Debugging('STATUS for {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
 
