@@ -434,7 +434,13 @@ class GitCat:
                         else:
                             push = Git(rep, 'push', '--porcelain')
                             if push:
-                                self.message('pushed\n  {}'.format(push.stdout.replace('\n','\n  ')))
+                                if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
+                                    self.rep_message(rep, 'pushed')
+                                else:
+                                    self.rep_message(rep, 'pushed\n  {}'.format(stdout.replace('\n','\n  ')))
+
+                else:
+                    self.rep_message(rep, 'no changes')
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -451,7 +457,7 @@ class GitCat:
             self.error_message('unknown repository {}'.format(dir))
 
         del self.catalogue[rep]
-        self.message('Removing {} from the catalgue'.format(dir))
+        self.message('Removing {} from the catalogue'.format(dir))
         self.save_catalogue()
 
         if self.options.delete:
