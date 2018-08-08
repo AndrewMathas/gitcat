@@ -69,7 +69,7 @@ class Git:
         self.git = git
 
         if self.returncode != 0 or self.stderr != '':
-            print('{}: there was an error using {}\n  {}\n'.format(
+            print('{}: there was an error using git {}\n  {}\n'.format(
                 rep,
                 command,
                 self.stderr.replace('\n', '\n  '),
@@ -479,37 +479,37 @@ class GitCat:
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
 
-                # update  wit remote, unless local is true
-                if not self.options.local:
-                    remote = Git(rep, 'remote','update')
+                # update with remote, unless local is true
+                remote = self.options.local or Git(rep, 'remote','update')
 
-                # use status to work out relative changes
-                status = Git(rep, 'status', status_options)
-                if status:
-                    stdout = status.stdout.split('\n')
-                    changes = ahead_behind.search(stdout.pop(0))
-                    changes = '' if changes is None else changes.group()[1:-1]
+                if remote:
+                    # use status to work out relative changes
+                    status = Git(rep, 'status', status_options)
+                    if status:
+                        stdout = status.stdout.split('\n')
+                        changes = ahead_behind.search(stdout.pop(0))
+                        changes = '' if changes is None else changes.group()[1:-1]
 
-                    # use diff to work out which files have changed
-                    changed = ''
-                    diff = Git(rep, 'diff', diff_options)
-                    if diff:
-                        changed = files_changed.search(diff.stdout)
-                        changed = '' if changed is None else changed.group()
+                        # use diff to work out which files have changed
+                        changed = ''
+                        diff = Git(rep, 'diff', diff_options)
+                        if diff:
+                            changed = files_changed.search(diff.stdout)
+                            changed = '' if changed is None else changed.group()
 
-                    if changes!='':
-                        changed += changes if changed=='' else ', '+changes
+                        if changes!='':
+                            changed += changes if changed=='' else ', '+changes
 
-                    if stdout != [] and not self.quiet:
-                        self.rep_message(
-                            rep,
-                            '{}\n  {}'.format(changed, '\n  '.join(lin for lin in stdout)),
-                            quiet=False
-                        )
-                    elif changes != '':
-                        self.rep_message(rep, changes)
-                    else:
-                        self.rep_message(rep, 'up to date')
+                        if stdout != [] and not self.quiet:
+                            self.rep_message(
+                                rep,
+                                '{}\n  {}'.format(changed, '\n  '.join(lin for lin in stdout)),
+                                quiet=False
+                            )
+                        elif changes != '':
+                            self.rep_message(rep, changes)
+                        else:
+                            self.rep_message(rep, 'up to date')
 
             else:
                 self.rep_message(rep, 'not on system')
