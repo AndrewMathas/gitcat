@@ -30,7 +30,7 @@ class Settings(dict):
     def Version(self):
         return 'git cat version {}'.format(self.version)
 
-settings = Settings('gitcat.ini')
+settings = Settings(os.path.join(os.path.dirname(__file__),'gitcat.ini'))
 
 # ---------------------------------------------------------------------------------------
 # running git commands using subprocess
@@ -54,7 +54,6 @@ class Git:
     """
     def __init__(self, rep, command, options=None):
         # run command
-        #print('{}: git {} {}'.format(rep, command, options))
         git = subprocess.run(
                 'git {} {}'.format(command, options).strip(),
                 shell=True,
@@ -68,11 +67,10 @@ class Git:
         self.stdout = git.stdout.decode().strip()
 
         if self.returncode != 0 or self.stderr != '':
-            print('{}: there was an error using {}\n  {}\n{}'.format(
+            print('{}: there was an error using {}\n  {}\n'.format(
                 rep,
                 command,
                 self.stderr.replace('\n', '\n  '),
-                git
             ))
             self.git_command_ok = False
         else:
@@ -386,7 +384,7 @@ class GitCat:
         Run through all repositories and update them if their directories
         already exist on this computer
         '''
-        options = 'git pull'
+        options = '-q'
         for option in ['ff_only', 'strategy', 'stat']:
             opt = getattr(self.options, option)
             if opt == True or opt == None:
@@ -600,7 +598,8 @@ class CollectUnknown(argparse.Action):
         except AttributeError:
             setattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR, extras)
 
-if __name__ == '__main__':
+# ---------------------------------------------------------------------------------------
+def main():
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
@@ -724,3 +723,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     GitCat(options)
+
+# ---------------------------------------------------------------------------------------
+if __name__ == '__main__':
+    main()

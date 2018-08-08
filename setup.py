@@ -13,7 +13,8 @@ r'''
 -----------------------------------------------------------------------------------------
 '''
 
-import git-cat
+from setuptools import setup, find_packages
+import gitcat
 
 class Settings(dict):
     r"""
@@ -31,7 +32,7 @@ settings = Settings('gitcat.ini')
 setup(name             = settings.program,
       version          = settings.version,
       desription       = settings.description,
-      long_description = git-cat.__doc__,
+      long_description = gitcat.__doc__,
       url              = settings.url,
       author           = settings.author,
       author_email     = settings.author_email,
@@ -42,7 +43,7 @@ setup(name             = settings.program,
       include_package_data=True,
       python_requires='>=3',
 
-      entry_points     = {'console_scripts': ['git-cat = git-cat:main', ],},
+      entry_points     = {'console_scripts': ['git-cat = gitcat:main', ],},
 
       license          = settings.licence,
       classifiers      = [
