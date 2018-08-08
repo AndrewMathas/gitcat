@@ -93,7 +93,7 @@ class Git:
 
     def __repr__(self):
         """ define a __repr__ method for debugging """
-        return 'Git({})\n  OK = {} returncode = {}\n  stdout: {}\n stderr:{}'.format(
+        return 'Git({})\n  OK={}, returncode={}\n  stdout: {}\n  stderr:{}'.format(
                 self.command,
                 self.git_command_ok,
                 self.returncode,
