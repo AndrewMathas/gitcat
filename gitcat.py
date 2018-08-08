@@ -424,7 +424,7 @@ class GitCat:
         exist on this computer. Commit the repository if it has changes
         '''
         for rep in self.catalogue:
-            Debugging('pushing {}'.format(rep))
+            Debugging('PUSHING {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep, dir)
