@@ -511,6 +511,8 @@ class GitCat:
             if self.is_git_repository(dir):
                 commit = self.commit_repository(rep)
                 if commit:
+                    if commit.stdout != '':
+                        self.rep_message(rep, 'commit\n {}'.commit.stdout.replace('\n', '\n  '))
                     push = Git(rep, 'push', '--dry-run --porcelain')
                     if push:
                         if '[up to date]' in push.stdout:
@@ -523,9 +525,15 @@ class GitCat:
                             push = Git(rep, 'push', '--porcelain')
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
-                                    self.rep_message(rep, 'pushed')
+                                    if commit.stdout == '':
+                                        self.rep_message(rep, 'pushed\n  '.format(push.stdout.split('\n')[0]))
+                                    else:
+                                        self.message('  {}'.format(push.stdout.split('\n')[0]))
                                 else:
-                                    self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
+                                    if commit.stdout == '':
+                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
+                                    else:
+                                        self.message('  {}'.format(push.stdout.replace('\n', '\n  ')))
 
             else:
                 self.rep_message(rep, 'not on system')
