@@ -17,6 +17,11 @@ import subprocess
 import sys
 
 # ---------------------------------------------------------------------------------------
+# To do:
+#   - allow git cat commands to apply to subset of repositories
+#   - display pull and push messages
+
+# ---------------------------------------------------------------------------------------
 # settings
 class Settings(dict):
     r"""
@@ -324,9 +329,9 @@ class GitCat:
             self.save_catalogue()
             self.message('Adding {} to the catalogue'.format(dir))
 
-    def cat(self):
+    def ls(self):
         r'''
-        Print the list of repositories
+        List the repositories managed by git cat
         '''
         print(self.list_catalogue(listing=False))
 
@@ -733,7 +738,7 @@ def main():
                          help='print messages'
     )
 
-    subparsers.add_parser('cat', help='List all of the repositories in the catalogue')
+    subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
     pull.add_argument('commands', type=str, nargs='*', help='')
