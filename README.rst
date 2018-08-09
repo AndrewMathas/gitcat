@@ -1,4 +1,3 @@
-
 =======
 git-cat
 =======
@@ -8,7 +7,14 @@ Herding a catalogue of git repositories
 
 Simultaneously push and pull to a catalogue of remote git repositories
 
-Commands:
+    usage: git cat [-h] [-c CATALOGUE] [-p PREFIX] [-q] <command> [options] ...
+
+A command line tool for synchroning a catalogue of git repositories. It uses
+the catalogue of repositories, which is stored in the gitcatrc file, which is
+either in the directory ~/.dotfiles/config or in the HOME directory.
+
+Commands
+--------
 
   -add     -  Add repository to the catalogue
   -commit  -  Commit all uncommitted repositories in the catalogue
@@ -50,15 +56,5 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-.. _AMS: http://http://www.ams.org
-.. _arXiv: http://arxiv.org/
-.. _BibTeX: http://www.bibtex.org/
-.. _bibupdate: https://bitbucket.org/AndrewsBucket/bibupdate
-.. _download: http://bitbucket.org/AndrewsBucket/bibupdate/downloads/
 .. _GPL: http://www.gnu.org/licenses/gpl.html
-.. _hyperref: http://www.ctan.org/pkg/hyperref
-.. _LaTeX: http://en.wikipedia.org/wiki/LaTeX
-.. _MathSciNet: http://www.ams.org/mathscinet/
-.. _mref: http://www.ams.org/mref
-.. _mrlookup: http://www.ams.org/mrlookup
 .. _Python: https://www.python.org/

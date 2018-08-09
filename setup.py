@@ -15,6 +15,7 @@ r'''
 
 from setuptools import setup, find_packages
 import gitcat
+import subprocess
 
 class Settings(dict):
     r"""
@@ -29,9 +30,11 @@ class Settings(dict):
 
 settings = Settings('gitcat.ini')
 
+subprocess.run('rst2man.py README.rst > git-cat.1', shell=True)
+
 setup(name             = settings.program,
       version          = settings.version,
-      desription       = settings.description,
+      description      = settings.description,
       long_description = gitcat.__doc__,
       url              = settings.url,
       author           = settings.author,
@@ -41,7 +44,7 @@ setup(name             = settings.program,
 
       packages=find_packages(),
       include_package_data=True,
-      python_requires='>=3',
+      python_requires='>=3.7',
 
       entry_points     = {'console_scripts': ['git-cat = gitcat:main', ],},
 
