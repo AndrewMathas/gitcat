@@ -68,7 +68,7 @@ class Git:
      Both stdout and stderr are decoded and stripped.
     """
     def __init__(self, rep, command, options=None):
-        # run command
+        """ run a git command and wrap the return values for later use """
         git = subprocess.run(
             'git {} {}'.format(command, options).strip(),
             shell=True,
@@ -80,7 +80,7 @@ class Git:
         self.returncode = git.returncode
         self.stderr = git.stderr.decode().strip()
         self.stdout = git.stdout.decode().strip()
-        self.command = command + options
+        self.command = command + ' ' + options
 
         if self.returncode != 0 or self.stderr != '':
             print('{}: there was an error using git {}\n  {}\n'.format(
@@ -100,19 +100,19 @@ class Git:
 
     def __repr__(self):
         """ define a __repr__ method for debugging """
-        return 'Git({})\n  rep={}, OK={}, returncode={}\n  stdout: {}\n  stderr:{}'.format(
+        return 'Git({})\n    rep={}, OK={}, returncode={}\n    stdout: {}\n    stderr:{}'.format(
             self.command,
             self.rep,
             self.git_command_ok,
             self.returncode,
-            self.stdout.replace('\n', '\n        '),
-            self.stderr.replace('\n', '\n        ')
+            self.stdout.replace('\n', '\n          '),
+            self.stderr.replace('\n', '\n          ')
         )
 
 # ---------------------------------------------------------------------------------------
 # regular expression for [ahead 1], or [behind 1] or [ahead # 2, behind 1] in status
 ahead_behind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
-files_changed = re.compile(r'[0-9]+ file(s|) changed')
+files_changed = re.compile(r'([0-9]+ file(?:s|))(?: changed)')
 
 # ---------------------------------------------------------------------------------------
 class GitCat:
@@ -419,7 +419,9 @@ class GitCat:
         Run through all repositories and update them if their directories
         already exist on this computer
         '''
-        options = '-q'
+        # need to use -q to stop output being printed to stderr, but then we
+        # have to work harder to extract information about the pull
+        options = '-q --progress'
         for option in ['ff_only', 'strategy', 'stat']:
             opt = getattr(self.options, option)
             if opt in (True, None):
@@ -434,8 +436,8 @@ class GitCat:
                 pull = Git(rep, 'pull', options)
                 if pull:
                     stdout = pull.stdout
-                    if stdout == 'Already up to date.\n':
-                        self.rep_message(rep, stdout.lower())
+                    if stdout == '':
+                        self.rep_message(rep, 'already up to date')
                     else:
                         self.rep_message(
                             rep,
@@ -471,8 +473,6 @@ class GitCat:
                                 else:
                                     self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
 
-                else:
-                    self.rep_message(rep, 'no changes')
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -527,7 +527,7 @@ class GitCat:
                         diff = Git(rep, 'diff', diff_options)
                         if diff:
                             changed = files_changed.search(diff.stdout)
-                            changed = '' if changed is None else changed.group()
+                            changed = '' if changed is None else 'uncommitted changes: ' + changed.groups()[0]
 
                         if changes != '':
                             changed += changes if changed == '' else ', '+changes
@@ -539,7 +539,7 @@ class GitCat:
                                 quiet=False
                             )
                         elif changes != '':
-                            self.rep_message(rep, changes)
+                            self.rep_message(rep, changes, quiet=False)
                         else:
                             self.rep_message(rep, 'up to date')
 
@@ -668,10 +668,7 @@ def main():
 
     subparsers = parser.add_subparsers(help='Subcommand to run', dest='command')
 
-    add = subparsers.add_parser('add',
-                                help='Add repository to the catalogue',
-                                formatter_class=CustomHelpFormatter,
-    )
+    add = subparsers.add_parser('add', help='Add repository to the catalogue')
     add.add_argument('repository',
                      type=str,
                      nargs='?',
