@@ -43,7 +43,6 @@ Copyright (C) 2018
 
 Todo:
     - README file/documentation
-    - allow each command to be applied to a subset of the catalogue
     - make git command work
 
 Licence
@@ -260,7 +259,7 @@ class GitCat:
             rep=self.catalogue[dir],
             sep='=' if listing or self.is_git_repository(self.expand_path(dir)) else '!',
             max=self.max
-            ) for dir in sorted(self.catalogue.keys())
+            ) for dir in self.repositories()
         )
 
     def read_catalogue(self):
@@ -291,7 +290,7 @@ class GitCat:
             self.error_message('there was a problem reading the catalogue file {}'.format(self.filename))
 
         # set the maximum length of a catelogue key
-        self.max = max(len(dir) for dir in sorted(self.catalogue)) + 1
+        self.max = max(len(dir) for dir in self.repositories()) + 1
 
     def save_catalogue(self):
         r'''
@@ -337,6 +336,13 @@ class GitCat:
         '''
         if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, message, max=self.max, end=ending))
+
+    def repositories(self):
+        ''' return list of repositories to iterate over by filterin
+            by options.repositories
+        '''
+        repositories = re.compile(self.options.repositories)
+        return sorted(filter(repositories.search, self.catalogue.keys()))
 
     # ---------------------------------------------------------------------------------------
     # Now implement the git cat commands available from the command line
@@ -396,7 +402,7 @@ class GitCat:
         commits only one repository, since other methods need to call this as
         well.
         '''
-        for rep in self.catalogue:
+        for rep in self.repositories():
             Debugging('COMMITTING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
@@ -416,7 +422,7 @@ class GitCat:
                 options += ' --{}={}'.format(option, opt)
 
         options += ' HEAD'
-        for rep in sorted(self.catalogue.keys()):
+        for rep in self.repositories():
             Debugging('DIFFING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
@@ -434,7 +440,7 @@ class GitCat:
     def git(self, commands):
         r''' Run git commands on every repository in the catalogue '''
         git_command = '{}'.format(' '.join(cmd for cmd in commands))
-        for rep in self.catalogue:
+        for rep in self.repositories():
             Debugging('GITTING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
@@ -483,7 +489,7 @@ class GitCat:
             elif opt is not False:
                 options += ' --{}={}'.format(option, opt)
 
-        for rep in self.catalogue:
+        for rep in self.repositories():
             Debugging('PULLNG '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
@@ -505,7 +511,7 @@ class GitCat:
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
         '''
-        for rep in self.catalogue:
+        for rep in self.repositories():
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
@@ -526,7 +532,7 @@ class GitCat:
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     if commit.stdout == '':
-                                        self.rep_message(rep, 'pushed\n  '.format(push.stdout.split('\n')[0]))
+                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
                                     else:
                                         self.message('  {}'.format(push.stdout.split('\n')[0]))
                                 else:
@@ -568,7 +574,7 @@ class GitCat:
         )
         diff_options = '--shortstat --no-color'
 
-        for rep in sorted(self.catalogue.keys()):
+        for rep in self.repositories():
             Debugging('STATUS for {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
@@ -744,6 +750,8 @@ def main():
                         default=False,
                         help=DRYRUN
     )
+    commit.add_argument(dest='repositories', type=str, default='', nargs='?',
+                        help='optionally filter the repositories to commit')
 
     diff = subparsers.add_parser('diff', help='Print a diff of the changes in each repository')
     diff.add_argument('-q', '--quiet',
@@ -773,6 +781,8 @@ def main():
                       default=False,
                       help='Generate a diffstat using git diff --stat = ...'
     )
+    diff.add_argument(dest='repositories', type=str, default='', nargs='?',
+                      help='optionally filter the repositories to diff')
 
 #    git = subparsers.add_parser(
 #        'git',
@@ -796,6 +806,8 @@ def main():
                          default=False,
                          help='print messages'
     )
+    install.add_argument(dest='repositories', type=str, default='', nargs='?',
+                         help='optionally filtered repositories to install')
 
     subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
 
@@ -825,6 +837,8 @@ def main():
                       action='store_true',
                       default=False,
                       help='Show a diffstat at the end of the merge.')
+    pull.add_argument(dest='repositories', type=str, default='', nargs='?',
+                      help='optionally filtered repositories to pull')
 
     push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
     push.add_argument('commands', type=str, nargs='*', help='')
@@ -837,6 +851,8 @@ def main():
                       action='store_true',
                       default=False,
                       help='Print messages each time a repository is pushed')
+    push.add_argument(dest='repositories', type=str, default='', nargs='?',
+                      help='optionally filter the repositories to push')
 
     remove = subparsers.add_parser('remove', help='Remove repository from the catalogue')
     remove.add_argument('-d', '--delete',
@@ -869,6 +885,8 @@ def main():
                         default='no',
                         help='Show untracked files using git status mode'
     )
+    status.add_argument(dest='repositories', type=str, default='', nargs='?',
+                        help='optionally filter repositories for status')
 
     options = parser.parse_args()
     DEBUGGING = options.debugging
