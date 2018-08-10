@@ -314,10 +314,6 @@ class GitCat:
             filtering by options.repositories
         '''
         repositories = re.compile(self.options.repositories)
-        print('rep={} giving \n  '.format(self.options.repositories,
-                '\n  '.join(sorted(filter(repositories.search, self.catalogue.keys())))
-                )
-        )
         return sorted(filter(repositories.search, self.catalogue.keys()))
 
     # ---------------------------------------------------------------------------------------
@@ -813,7 +809,9 @@ def main():
     install.add_argument(dest='repositories', type=str, default='', nargs='?',
                          help='optionally filter the repositories to install')
 
-    subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
+    ls = subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
+    ls.add_argument(dest='repositories', type=str, default='', nargs='?',
+                    help='optionally filter the repositories to list')
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
     pull.add_argument('-n', '--dry-run',
