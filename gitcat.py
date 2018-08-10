@@ -309,6 +309,17 @@ class GitCat:
         '''
         return dir[len(self.prefix)+1:] if dir.startswith(self.prefix) else dir
 
+    def repositories(self):
+        ''' return the list of repositories to iterate over by 
+            filtering by options.repositories
+        '''
+        repositories = re.compile(self.options.repositories)
+        print('rep={} giving \n  '.format(self.options.repositories,
+                '\n  '.join(sorted(filter(repositories.search, self.catalogue.keys())))
+                )
+        )
+        return sorted(filter(repositories.search, self.catalogue.keys()))
+
     # ---------------------------------------------------------------------------------------
     # messages
     # ---------------------------------------------------------------------------------------
@@ -336,17 +347,6 @@ class GitCat:
         '''
         if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, message, max=self.max, end=ending))
-
-    def repositories(self):
-        ''' return list of repositories to iterate over by filterin
-            by options.repositories
-        '''
-        repositories = re.compile(self.options.repositories)
-        print('rep={} giving \n  '.format(self.options.repositories,
-                '\n  '.join(sorted(filter(repositories.search, self.catalogue.keys())))
-                )
-        )
-        return sorted(filter(repositories.search, self.catalogue.keys()))
 
     # ---------------------------------------------------------------------------------------
     # Now implement the git cat commands available from the command line
