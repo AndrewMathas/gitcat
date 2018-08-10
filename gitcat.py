@@ -289,8 +289,11 @@ class GitCat:
         except (FileNotFoundError, IOError):
             self.error_message('there was a problem reading the catalogue file {}'.format(self.filename))
 
-        # set the maximum length of a catelogue key
-        self.max = max(len(dir) for dir in self.repositories()) + 1
+        # set the maximum length of a catalogue key
+        try:
+            self.max = max(len(dir) for dir in self.repositories()) + 1
+        except ValueError:
+            self.max = 0
 
     def save_catalogue(self):
         r'''
