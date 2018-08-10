@@ -313,6 +313,10 @@ class GitCat:
         ''' return the list of repositories to iterate over by 
             filtering by options.repositories
         '''
+        # if there is no filter then return the sorted catalogue keys
+        if not hasattr(self.options, 'repositories'):
+            return sorted(self.catalogue.keys())
+
         repositories = re.compile(self.options.repositories)
         return sorted(filter(repositories.search, self.catalogue.keys()))
 
