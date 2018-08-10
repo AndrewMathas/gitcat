@@ -342,6 +342,10 @@ class GitCat:
             by options.repositories
         '''
         repositories = re.compile(self.options.repositories)
+        print('rep={} giving \n  '.format(self.options.repositories,
+                '\n  '.join(sorted(filter(repositories.search, self.catalogue.keys())))
+                )
+        )
         return sorted(filter(repositories.search, self.catalogue.keys()))
 
     # ---------------------------------------------------------------------------------------
@@ -518,7 +522,7 @@ class GitCat:
                 commit = self.commit_repository(rep)
                 if commit:
                     if commit.stdout != '':
-                        self.rep_message(rep, 'commit\n {}'.commit.stdout.replace('\n', '\n  '))
+                        self.rep_message(rep, 'commit\n {}'.format(commit.stdout.replace('\n', '\n  ')))
                     push = Git(rep, 'push', '--dry-run --porcelain')
                     if push:
                         if '[up to date]' in push.stdout:
@@ -807,12 +811,11 @@ def main():
                          help='print messages'
     )
     install.add_argument(dest='repositories', type=str, default='', nargs='?',
-                         help='optionally filtered repositories to install')
+                         help='optionally filter the repositories to install')
 
     subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
-    pull.add_argument('commands', type=str, nargs='*', help='')
     pull.add_argument('-n', '--dry-run',
                       action='store_true',
                       default=False,
@@ -838,10 +841,9 @@ def main():
                       default=False,
                       help='Show a diffstat at the end of the merge.')
     pull.add_argument(dest='repositories', type=str, default='', nargs='?',
-                      help='optionally filtered repositories to pull')
+                      help='optionally filter the repositories to pull')
 
     push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
-    push.add_argument('commands', type=str, nargs='*', help='')
     push.add_argument('-n', '--dry-run',
                       action='store_true',
                       default=False,
