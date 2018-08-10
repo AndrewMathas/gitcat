@@ -509,10 +509,7 @@ class GitCat:
                     if stdout == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(
-                            rep,
-                            '\n  '.join(f for f in stdout.split('\n') if f != '')
-                        )
+                        self.rep_message(rep, stdout.replace('\n', '\n  '))
             else:
                 self.rep_message(rep, 'not on system')
 
