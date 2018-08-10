@@ -347,6 +347,10 @@ class GitCat:
         If `self.quiet` is `True` then print `message` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
+        Debugging('rep message: quiet={}, self.quiet={} and quietness={}'.format(
+                  quiet, self.quiet, not(quiet and self.quiet)
+                 )
+        )
         if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, message, max=self.max, end=ending))
 
@@ -525,7 +529,7 @@ class GitCat:
                 if commit:
                     if commit.stdout != '':
                         self.rep_message(rep, 'commit\n {}'.format(commit.stdout.replace('\n', '\n  ')))
-                    push = Git(rep, 'push', '--dry-run --porcelain')
+                    push = Git(rep, 'push', '--tags --dry-run --porcelain')
                     if push:
                         if '[up to date]' in push.stdout:
                             self.rep_message(rep, 'up to date')
@@ -534,7 +538,7 @@ class GitCat:
                                              'dry-run\n {}'.format(push.stdout.replace('\n', '\n  '))
                             )
                         else:
-                            push = Git(rep, 'push', '--porcelain')
+                            push = Git(rep, 'push', '--tags --porcelain')
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     if commit.stdout == '':
@@ -606,14 +610,15 @@ class GitCat:
                         if changes != '':
                             changed += changes if changed == '' else ', '+changes
 
-                        if stdout != [] and not self.quiet:
+                        Debugging('Status: changed={}\nStdout: '.format(changed, '\n        '.join(stdout)))
+                        if stdout != []:
                             self.rep_message(
                                 rep,
                                 '{}\n  {}'.format(changed, '\n  '.join(lin for lin in stdout)),
                                 quiet=False
                             )
-                        elif changes != '':
-                            self.rep_message(rep, changes, quiet=False)
+                        elif changed != '':
+                            self.rep_message(rep, changed, quiet=False)
                         else:
                             self.rep_message(rep, 'up to date')
 
