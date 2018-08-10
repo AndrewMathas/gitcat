@@ -7,7 +7,7 @@ git-cat
 Herding a catalogue of git repositories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Simultaneously push and pull to a catalogue of remote git repositories
+Simultaneously push and pull a catalogue of remote git repositories
 
     usage: git cat [-h] [-c CATALOGUE] [-p PREFIX] [-q] <command> [options] ...
 
@@ -37,9 +37,8 @@ Optional arguments:
 
 Author
 ------
-
-Andrew Mathas 2018
-Copyright (C) 2018
+Andrew Mathas
+(c) Copyright 2018
 
 Todo:
     - README file/documentation
