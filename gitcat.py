@@ -526,7 +526,7 @@ class GitCat:
                 if commit:
                     if commit.stdout != '':
                         self.rep_message(rep, 'commit\n {}'.format(commit.stdout.replace('\n', '\n  ')))
-                    push = Git(rep, 'push', '--tags --dry-run --porcelain')
+                    push = Git(rep, 'push', '--follow-tags --dry-run --porcelain')
                     if push:
                         if '[up to date]' in push.stdout:
                             self.rep_message(rep, 'up to date')
@@ -535,7 +535,7 @@ class GitCat:
                                              'dry-run\n {}'.format(push.stdout.replace('\n', '\n  '))
                             )
                         else:
-                            push = Git(rep, 'push', '--tags --porcelain')
+                            push = Git(rep, 'push', '--follow-tags --porcelain')
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     if commit.stdout == '':
