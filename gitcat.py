@@ -274,7 +274,7 @@ class GitCat:
                 options += ' --'+option.replace('_', '-')
             elif opt is not False:
                 options += ' --{}={}'.format(option, opt)
-        return optionsreturn options
+        return options
 
     def read_catalogue(self):
         r'''
@@ -519,7 +519,7 @@ class GitCat:
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
         '''
-        options = self.process_options('--porcelain', ['all', 'tags', 'follow-tags'])
+        options = self.process_options('--porcelain', ['all', 'tags', 'follow_tags'])
         for rep in self.repositories():
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
