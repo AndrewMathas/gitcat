@@ -42,6 +42,7 @@ Andrew Mathas
 
 Todo:
     - README file/documentation
+    - debugging and testing...
     - make git command work
 
 Licence
@@ -187,8 +188,10 @@ class GitCat:
         self.prefix = options.prefix
         self.quiet = options.quiet
 
-        # read the catolgue from the rc file
-        self.catalogue = {}
+        if hasattr(options, 'git_dry_run'):
+            self.dry_run = options.git_dry_run
+
+        # read the catalogue from the rc file
         self.read_catalogue()
 
         # run corresponding command
@@ -261,20 +264,22 @@ class GitCat:
             ) for dir in self.repositories()
         )
 
-    def process_options(self, default_options, options_list):
+    def process_options(self, default_options=''):
         r'''
            Set the command line options starting with `default_options` and
            then checking the command list options against the list of options
            in `options_list`
         '''
         options = default_options
-        for option in options_list:
-            opt = getattr(self.options, option)
-            if opt in (True, None):
-                options += ' --'+option.replace('_', '-')
-            elif opt is not False:
-                options += ' --{}={}'.format(option, opt)
-        return optionsreturn options
+        for option in vars(self.options):
+            if option.startswith('git_'):
+                opt = option[4:].replace('_', '-')
+                val = getattr(self.options, option)
+                if val in (True, None):
+                    options += ' --'+opt
+                elif val is not False:
+                    options += ' --{}={}'.format(opt, val)
+        return options
 
     def read_catalogue(self):
         r'''
@@ -288,6 +293,7 @@ class GitCat:
         and then put into the dictionary self.catalogue with the directory as
         the key. Any lines that do not contain an equal sign are ignored.
         '''
+        self.catalogue = {}
         try:
             with open(self.filename, 'r') as catalogue:
                 for line in catalogue:
@@ -438,7 +444,7 @@ class GitCat:
         Run git diff with various options on the repositories in the
         catalogue.
         '''
-        options = self.process_options('', ['dirstat', 'numstat', 'stat', 'shortstat'])
+        options = self.process_options()
         options += ' HEAD'
         for rep in self.repositories():
             Debugging('DIFFING '+rep)
@@ -454,6 +460,28 @@ class GitCat:
                         )
                     else:
                         self.rep_message(rep, 'up to date')
+
+    def fetch(self):
+        r'''
+        Run through all repositories and update them if their directories
+        already exist on this computer
+        '''
+        # need to use -q to stop output being printed to stderr, but then we
+        # have to work harder to extract information about the pull
+        options = self.process_options('-q --progress')
+        for rep in self.repositories():
+            Debugging('FETCHING '+rep)
+            dir = self.expand_path(rep)
+            if self.is_git_repository(dir):
+                pull = Git(rep, 'fetch', options)
+                if pull:
+                    stdout = pull.stdout
+                    if stdout == '':
+                        self.rep_message(rep, 'already up to date')
+                    else:
+                        self.rep_message(rep, stdout.replace('\n', '\n  '))
+            else:
+                self.rep_message(rep, 'not on system')
 
     def git(self, commands):
         r''' Run git commands on every repository in the catalogue '''
@@ -499,9 +527,9 @@ class GitCat:
         '''
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
-        options = self.process_options('-q --progress', ['ff_only', 'strategy', 'stat'])
+        options = self.process_options('-q --progress')
         for rep in self.repositories():
-            Debugging('PULLNG '+rep)
+            Debugging('PULLING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 pull = Git(rep, 'pull', options)
@@ -519,7 +547,7 @@ class GitCat:
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
         '''
-        options = self.process_options('--porcelain', ['all', 'tags', 'follow-tags'])
+        options = self.process_options('--porcelain')
         for rep in self.repositories():
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
@@ -578,9 +606,7 @@ class GitCat:
         r'''
         Print the status of all of the repositories in the catalogue
         '''
-        status_options = '--branch --short --porcelain --untracked-files={}'.format(
-            self.options.untracked_files
-        )
+        status_options = self.process_options('--porcelain --short --branch')
         diff_options = '--shortstat --no-color'
 
         for rep in self.repositories():
@@ -758,6 +784,7 @@ def main():
     commit.add_argument('-n', '--dry-run',
                         action='store_true',
                         default=False,
+                        dest='git_dry_run',
                         help=DRYRUN
     )
     commit.add_argument(dest='repositories', type=str, default='', nargs='?',
@@ -767,32 +794,78 @@ def main():
     diff.add_argument('-q', '--quiet',
                       action='store_true',
                       default=False,
+                      dest='git_quiet',
                       help='List the file changes in all repositories'
     )
     diff.add_argument('--shortstat',
                       action='store_true',
                       default=False,
+                      dest='git_shortstat',
                       help='Output only the last line of the --stat format'
     )
     diff.add_argument('--numstat',
                       action='store_true',
                       default=False,
+                      dest='git_numstat',
                       help='Similar to --stat, but shows number of added and deleted lines without abbreviation'
     )
     diff.add_argument('--dirstat',
                       nargs='?',
                       type=str,
                       default=False,
+                      dest='git_dirstat',
                       help='Output the distribution of relative amount of changes for each sub-directory'
     )
     diff.add_argument('--stat',
                       nargs='?',
                       type=str,
                       default=False,
+                      dest='git_stat',
                       help='Generate a diffstat using git diff --stat = ...'
     )
     diff.add_argument(dest='repositories', type=str, default='', nargs='?',
                       help='optionally filter the repositories to diff')
+
+    fetch = subparsers.add_parser('fetch', help='Pull all repositories in the catalogue')
+    fetch.add_argument('--all', 
+                      action='store_true',
+                      default=False,
+                      dest='git_all',
+                      help='Pull all branches'
+    )
+    fetch.add_argument('-n', '--dry-run',
+                      action='store_true',
+                      default=False,
+                      dest='git_dry_run',
+                      help='Print what would be done without doing it'
+    )
+    fetch.add_argument('-q', '--quiet',
+                      action='store_true',
+                      default=False,
+                      dest='git_quiet',
+                      help='Print messages when fetching each repository'
+    )
+    fetch.add_argument('-f', '--force',
+                      action='store_true',
+                      default=False,
+                      dest='git_force',
+                      help='Before fetching, remove any remote-tracking references that no longer exist on the remote'
+    )
+    fetch.add_argument('-p', '--prune',
+                      action='store_true',
+                      default=False,
+                      dest='git_prune',
+                      help='Before fetching, remove any remote-tracking references that no longer exist on the remote'
+    )
+    fetch.add_argument('--tags',
+                      action='store_true',
+                      default=False,
+                      dest='git_tags',
+                      help='Fetch all refs under refs/tags'
+    )
+    fetch.add_argument(dest='repositories', type=str, default='', nargs='?',
+                      help='optionally filter the repositories to fetch'
+    )
 
 #    git = subparsers.add_parser(
 #        'git',
@@ -821,12 +894,20 @@ def main():
 
     ls = subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
     ls.add_argument(dest='repositories', type=str, default='', nargs='?',
-                    help='optionally filter the repositories to list')
+                    help='optionally filter the repositories to list'
+    )
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
+    pull.add_argument('--all', 
+                      action='store_true',
+                      default=False,
+                      dest='git_all',
+                      help='Pull all branches'
+    )
     pull.add_argument('-n', '--dry-run',
                       action='store_true',
                       default=False,
+                      dest='git_dry_run',
                       help='Print what would be done without doing it'
     )
     pull.add_argument('-q', '--quiet',
@@ -837,19 +918,29 @@ def main():
     pull.add_argument('-f', '--ff-only',
                       action='store_true',
                       default=False,
+                      dest='git_ff_only',
                       help='Fast-forward only merge'
     )
     pull.add_argument('-s', '--strategy',
                       nargs='?', type=str,
                       default=False,
+                      dest='git_strategy',
                       help='Use the given merge strategy.'
     )
     pull.add_argument('--stat',
                       action='store_true',
                       default=False,
+                      dest='git_stat',
                       help='Show a diffstat at the end of the merge.')
     pull.add_argument(dest='repositories', type=str, default='', nargs='?',
-                      help='optionally filter the repositories to pull')
+                      help='optionally filter the repositories to pull'
+    )
+    pull.add_argument('--tags', 
+                      action='store_true',
+                      default=False,
+                      dest='git_tags',
+                      help='Pull all refs under refs/tags'
+    )
 
     push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
     push.add_argument('-n', '--dry-run',
@@ -860,16 +951,19 @@ def main():
     push.add_argument('--all', 
                       action='store_true',
                       default=False,
+                      dest='git_all',
                       help='Push all branches'
     )
     push.add_argument('--follow-tags', 
                       action='store_true',
                       default=False,
+                      dest='git_follow_tags',
                       help='Push all the refs that would be pushed without this option, and also push annotated tags in refs/tags that are missing from the remote but are pointing at commit-ish that are reachable from the refs being pushed'
     )
     push.add_argument('--tags', 
                       action='store_true',
                       default=False,
+                      dest='git_tags',
                       help='All refs under refs/tags are pushed'
     )
     push.add_argument('-q', '--quiet',
@@ -908,6 +1002,7 @@ def main():
     status.add_argument('-u', '--untracked-files',
                         choices=['no', 'normal', 'all'],
                         default='no',
+                        dest='git_untracked_files',
                         help='Show untracked files using git status mode'
     )
     status.add_argument(dest='repositories', type=str, default='', nargs='?',
