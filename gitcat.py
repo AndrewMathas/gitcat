@@ -261,6 +261,21 @@ class GitCat:
             ) for dir in self.repositories()
         )
 
+    def process_options(self, default_options, options_list):
+        r'''
+           Set the command line options starting with `default_options` and
+           then checking the command list options against the list of options
+           in `options_list`
+        '''
+        options = default_options
+        for option in options_list:
+            opt = getattr(self.options, option)
+            if opt in (True, None):
+                options += ' --'+option.replace('_', '-')
+            elif opt is not False:
+                options += ' --{}={}'.format(option, opt)
+        return optionsreturn options
+
     def read_catalogue(self):
         r'''
         Read the catalogue of git repositories to sync. These are stored in the
@@ -423,14 +438,7 @@ class GitCat:
         Run git diff with various options on the repositories in the
         catalogue.
         '''
-        options = ''
-        for option in ['dirstat', 'numstat', 'stat', 'shortstat']:
-            opt = getattr(self.options, option)
-            if opt in (True, None):
-                options += ' --'+option
-            elif opt is not False:
-                options += ' --{}={}'.format(option, opt)
-
+        options = self.process_options('', ['dirstat', 'numstat', 'stat', 'shortstat'])
         options += ' HEAD'
         for rep in self.repositories():
             Debugging('DIFFING '+rep)
@@ -491,14 +499,7 @@ class GitCat:
         '''
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
-        options = '-q --progress'
-        for option in ['ff_only', 'strategy', 'stat']:
-            opt = getattr(self.options, option)
-            if opt in (True, None):
-                options += ' --'+option.replace('_', '-')
-            elif opt is not False:
-                options += ' --{}={}'.format(option, opt)
-
+        options = self.process_options('-q --progress', ['ff_only', 'strategy', 'stat'])
         for rep in self.repositories():
             Debugging('PULLNG '+rep)
             dir = self.expand_path(rep)
@@ -518,6 +519,7 @@ class GitCat:
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
         '''
+        options = self.process_options('--porcelain', ['all', 'tags', 'follow-tags'])
         for rep in self.repositories():
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
@@ -854,6 +856,21 @@ def main():
                       action='store_true',
                       default=False,
                       help='Do everything except actually send the updates'
+    )
+    push.add_argument('--all', 
+                      action='store_true',
+                      default=False,
+                      help='Push all branches'
+    )
+    push.add_argument('--follow-tags', 
+                      action='store_true',
+                      default=False,
+                      help='Push all the refs that would be pushed without this option, and also push annotated tags in refs/tags that are missing from the remote but are pointing at commit-ish that are reachable from the refs being pushed'
+    )
+    push.add_argument('--tags', 
+                      action='store_true',
+                      default=False,
+                      help='All refs under refs/tags are pushed'
     )
     push.add_argument('-q', '--quiet',
                       action='store_true',
