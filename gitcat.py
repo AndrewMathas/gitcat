@@ -202,6 +202,7 @@ class GitCat:
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
         '''
+        return Git(rep, 'diff-index', '--name-only HEAD')
 
     def commit_repository(self, rep):
         r'''
@@ -209,7 +210,7 @@ class GitCat:
         The commit message is a list of the files being changed. Return
         the Git() record of the commit.
         '''
-        Debugging('COMMIT REP +'+rep)
+        Debugging('COMMIT rep='+rep)
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.stdout != '':
             commit_message = 'git cat: updating '+changed_files.stdout.replace('\n', ' ')
@@ -241,6 +242,7 @@ class GitCat:
         part of testing for a repository the current working directory is also
         changed to `dir`.
         '''
+        Debugging('CHECKING for git dir={}'.format(dir))
         if os.path.isdir(dir):
             os.chdir(dir)
             rep = dir.replace(self.prefix+'/', '')
@@ -551,6 +553,7 @@ class GitCat:
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
+                Debugging('Continuning with push')
                 commit = self.commit_repository(rep)
                 if commit:
                     if commit.stdout != '':
