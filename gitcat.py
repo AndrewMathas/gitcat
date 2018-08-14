@@ -782,6 +782,9 @@ def main():
                      help='Name of repository to add'
     )
 
+    # options with destinations of the form git_<name> designate command line
+    # options for git that gitcat will pass through for the relevant command
+
     commit = subparsers.add_parser('commit', help='Commit all uncommitted repositories in the catalogue')
     commit.add_argument('-n', '--dry-run',
                         action='store_true',
