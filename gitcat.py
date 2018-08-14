@@ -202,7 +202,6 @@ class GitCat:
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
         '''
-        return Git(rep, 'diff-index', '--name-only HEAD')
 
     def commit_repository(self, rep):
         r'''
