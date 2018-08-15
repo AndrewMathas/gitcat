@@ -11,9 +11,10 @@ Simultaneously push and pull a catalogue of remote git repositories
 
     usage: git cat [-h] [-c CATALOGUE] [-p PREFIX] [-q] <command> [options] ...
 
-A command line tool for synchroning a catalogue of git repositories. It uses
-the catalogue of repositories, which is stored in the gitcatrc file, which is
-either in the directory ~/.dotfiles/config or in the HOME directory.
+A command line tool for synchronising a catalogue of git repositories, which is
+stored in the gitcatrc file.
+
+
 
 Commands:
 
@@ -276,10 +277,14 @@ class GitCat:
             if option.startswith('git_'):
                 opt = option[4:].replace('_', '-')
                 val = getattr(self.options, option)
-                if val in (True, None):
+                if val in (True, False, None):
                     options += ' --'+opt
+                elif isinstance(val, list):
+                    options += ' --{}={}'.format(opt, ','.join(val))
                 elif val is not False:
                     options += ' --{}={}'.format(opt, val)
+                else:
+                    self.error_message('unknown value {} for option {}'.format(val, option))
         return options
 
     def read_catalogue(self):
@@ -334,7 +339,7 @@ class GitCat:
         return dir[len(self.prefix)+1:] if dir.startswith(self.prefix) else dir
 
     def repositories(self):
-        ''' return the list of repositories to iterate over by 
+        ''' return the list of repositories to iterate over by
             filtering by options.repositories
         '''
         # if there is no filter then return the sorted catalogue keys
@@ -421,6 +426,28 @@ class GitCat:
             self.save_catalogue()
             self.message('Adding {} to the catalogue'.format(dir))
 
+    def branch(self):
+        r'''
+        Run through all repositories and update them if their directories
+        already exist on this computer
+        '''
+        # need to use -q to stop output being printed to stderr, but then we
+        # have to work harder to extract information about the pull
+        options = self.process_options('--verbose')
+        for rep in self.repositories():
+            Debugging('BRANCH '+rep)
+            dir = self.expand_path(rep)
+            if self.is_git_repository(dir):
+                pull = Git(rep, 'branch', options)
+                if pull:
+                    stdout = pull.stdout.split('\n')[1:]
+                    if stdout == '':
+                        self.rep_message(rep, 'already up to date')
+                    else:
+                        self.rep_message(rep, '\n'+'\n'.join(stdout))
+            else:
+                self.rep_message(rep, 'not on system')
+
     def ls(self):
         r'''
         List the repositories managed by git cat
@@ -498,12 +525,7 @@ class GitCat:
         r'''
         Install some or all of the repositories in the catalogue
         '''
-        if self.options.install is not None:
-            reps_to_install = self.options.install
-        else:
-            reps_to_install = self.catalogue.keys()
-
-        for rep in reps_to_install:
+        for rep in self.repositories():
             Debugging('INSTALLING '+rep)
             dir = self.expand_path(rep)
             if not os.path.exists(dir):
@@ -529,6 +551,7 @@ class GitCat:
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
         options = self.process_options('-q --progress')
+        print('options={}'.format(options))
         for rep in self.repositories():
             Debugging('PULLING '+rep)
             dir = self.expand_path(rep)
@@ -564,7 +587,7 @@ class GitCat:
                             self.rep_message(rep, 'up to date')
                         elif self.options.dry_run:
                             self.rep_message(rep,
-                                             'dry-run\n {}'.format(push.stdout.replace('\n', '\n  '))
+                                'dry-run\n {}'.format(push.stdout.replace('\n', '\n  '))
                             )
                         else:
                             push = Git(rep, 'push', '--follow-tags --porcelain')
@@ -784,9 +807,12 @@ def main():
 
     # options with destinations of the form git_<name> designate command line
     # options for git that gitcat will pass through for the relevant command
+    branch = subparsers.add_parser('branch',
+        help = 'List local and remote branches together with last commit message'
+    )
 
     commit = subparsers.add_parser('commit', help='Commit all uncommitted repositories in the catalogue')
-    commit.add_argument('-n', '--dry-run',
+    commit.add_argument('-d', '--dry-run',
                         action='store_true',
                         default=False,
                         dest='git_dry_run',
@@ -832,13 +858,13 @@ def main():
                       help='optionally filter the repositories to diff')
 
     fetch = subparsers.add_parser('fetch', help='Pull all repositories in the catalogue')
-    fetch.add_argument('--all', 
+    fetch.add_argument('--all',
                       action='store_true',
                       default=False,
                       dest='git_all',
                       help='Pull all branches'
     )
-    fetch.add_argument('-n', '--dry-run',
+    fetch.add_argument('-d', '--dry-run',
                       action='store_true',
                       default=False,
                       dest='git_dry_run',
@@ -884,7 +910,7 @@ def main():
                          nargs='?',
                          help='Install only specified repository'
     )
-    install.add_argument('-n', '--dry-run',
+    install.add_argument('-d', '--dry-run',
                          action='store_true',
                          default=False,
                          help='Do everything except actually send the updates'
@@ -903,13 +929,13 @@ def main():
     )
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
-    pull.add_argument('--all', 
+    pull.add_argument('--all',
                       action='store_true',
                       default=False,
                       dest='git_all',
                       help='Pull all branches'
     )
-    pull.add_argument('-n', '--dry-run',
+    pull.add_argument('-d', '--dry-run',
                       action='store_true',
                       default=False,
                       dest='git_dry_run',
@@ -926,12 +952,6 @@ def main():
                       dest='git_ff_only',
                       help='Fast-forward only merge'
     )
-    pull.add_argument('-s', '--strategy',
-                      nargs='?', type=str,
-                      default=False,
-                      dest='git_strategy',
-                      help='Use the given merge strategy.'
-    )
     pull.add_argument('--stat',
                       action='store_true',
                       default=False,
@@ -940,32 +960,49 @@ def main():
     pull.add_argument(dest='repositories', type=str, default='', nargs='?',
                       help='optionally filter the repositories to pull'
     )
-    pull.add_argument('--tags', 
+    pull.add_argument('--tags',
                       action='store_true',
                       default=False,
                       dest='git_tags',
                       help='Pull all refs under refs/tags'
     )
+    # shothands for merge strategies
+    pull.add_argument('-s', '--strategy',
+                      nargs='?', type=str,
+                      action='append',
+                      default=None,
+                      dest='git_strategy',
+                      help='Use the given merge strategy.'
+    )
+    for strategy in ['ours', 'theirs', 'patience', 'octopus', 'subtree',
+            'renormalize', 'ignore-space-change', 'ignore-all-space',
+            'ignore-space-at-eol','ignore-cr-at-eol']:
+        pull.add_argument('--'+strategy,
+                          action='append_const', 
+                          const=strategy,
+                          dest='git_strategy',
+                          help="Use merge strategy '{}' when pulling repositories".format(strategy)
+        )
 
-    push = subparsers.add_parser('push', help='Push all repositories in the catalogue')
-    push.add_argument('-n', '--dry-run',
+    push = subparsers.add_parser('push', help='Push all repositories in the catalogue to their remote repositories')
+    push.add_argument('-d', '--dry-run',
                       action='store_true',
                       default=False,
                       help='Do everything except actually send the updates'
     )
-    push.add_argument('--all', 
+    push.add_argument('--all',
                       action='store_true',
                       default=False,
                       dest='git_all',
                       help='Push all branches'
     )
-    push.add_argument('--follow-tags', 
+    push.add_argument('--follow-tags',
                       action='store_true',
                       default=False,
                       dest='git_follow_tags',
                       help='Push all the refs that would be pushed without this option, and also push annotated tags in refs/tags that are missing from the remote but are pointing at commit-ish that are reachable from the refs being pushed'
     )
-    push.add_argument('--tags', 
+    push.add_argument('--tags',
                       action='store_true',
                       default=False,
                       dest='git_tags',

@@ -55,6 +55,7 @@ setup(name             = settings.program,
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Natural Language :: English',
+        'Operating System :: OS Independent',
         'Programming Language :: Python :: 3.7+',
         'Topic :: Software Development :: Version Control :: Git'
       ]
