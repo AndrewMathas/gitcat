@@ -16,16 +16,16 @@ either in the directory ~/.dotfiles/config or in the HOME directory.
 Commands
 --------
 
-  -add     -  Add repository to the catalogue
-  -commit  -  Commit all uncommitted repositories in the catalogue
-  -diff    -  Print a diff of the changes in each repository
-  -git     -  Run git commands on all repositories
-  -install -  Install all repositories in the catalogue
-  -cat     -  List all of the repositories in the catalogue
-  -pull    -  Pull all repositories in the catalogue
-  -push    -  Push all repositories in the catalogue
-  -remove  -  Remove repository from the catalogue
-  -status  -  Print the status of each repository in the catalogue
+  add       Add repository to the catalogue
+  commit    Commit all uncommitted repositories in the catalogue
+  diff      Print a diff of the changes in each repository
+  git       Run git commands on all repositories
+  install   Install all repositories in the catalogue
+  cat       List all of the repositories in the catalogue
+  pull      Pull all repositories in the catalogue
+  push      Push all repositories in the catalogue
+  remove    Remove repository from the catalogue
+  status    Print the status of each repository in the catalogue
 
 Optional arguments:
   -h, --help            show this help message and exit

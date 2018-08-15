@@ -3,7 +3,7 @@
 r'''
 -----------------------------------------------------------------------------------------
     setup | git-cat setuptools configuration
------------------------------------------------------------------------------------------
+
     Copyright (C) Andrew Mathas
 
     Distributed under the terms of the GNU General Public License (GPL)
@@ -30,7 +30,7 @@ class Settings(dict):
 
 settings = Settings('gitcat.ini')
 
-subprocess.run('rst2man.py README.rst > git-cat.1', shell=True)
+subprocess.run('/bin/rm git-cat.1 && rst2man.py README.rst > git-cat.1', shell=True)
 
 setup(name             = settings.program,
       version          = settings.version,
@@ -43,6 +43,7 @@ setup(name             = settings.program,
       keywords         = 'git, catalogue, repositories',
 
       packages=find_packages(),
+      data_files = [('man/man1', ['git-cat.1'])],
       include_package_data=True,
       python_requires='>=3.7',
 

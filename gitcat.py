@@ -14,8 +14,6 @@ Simultaneously push and pull a catalogue of remote git repositories
 A command line tool for synchronising a catalogue of git repositories, which is
 stored in the gitcatrc file.
 
-
-
 Commands:
 
   add     -  Add repository to the catalogue
@@ -154,7 +152,7 @@ class Git:
 
     def __repr__(self):
         """ define a __repr__ method for debugging """
-        return 'Git({})\n    rep={}, OK={}, returncode={}\n    stdout: {}\n    stderr:{}'.format(
+        return 'Git({})\n    rep={}, OK={}, returncode={}\n    stdout: {}\n    stderr: {}.'.format(
             self.command,
             self.rep,
             self.git_command_ok,
@@ -974,14 +972,15 @@ def main():
                       dest='git_strategy',
                       help='Use the given merge strategy.'
     )
-    for strategy in ['ours', 'theirs', 'patience', 'octopus', 'subtree',
-            'renormalize', 'ignore-space-change', 'ignore-all-space',
-            'ignore-space-at-eol','ignore-cr-at-eol']:
+    # TODO: these options are not quiet right: need to fix
+    for strategy in [ 'ours', 'ignore-all-space', 'ignore-cr-at-eol',
+        'ignore-space-at-eol', 'ignore-space-change', 'octopus', 'patience',
+        'recursive' 'renormalize', 'resolve', 'subtree', 'theirs']:
         pull.add_argument('--'+strategy,
-                          action='append_const', 
-                          const=strategy,
-                          dest='git_strategy',
-                          help="Use merge strategy '{}' when pulling repositories".format(strategy)
+            action='append_const',
+            const=strategy,
+            dest='git_strategy',
+            help="Use merge strategy '{}' when pulling repositories".format(strategy)
         )
 
     push = subparsers.add_parser('push', help='Push all repositories in the catalogue to their remote repositories')
