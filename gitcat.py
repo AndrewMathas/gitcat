@@ -611,9 +611,9 @@ class GitCat:
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     if commit.stdout == '':
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')))
+                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
                                     else:
-                                        self.message('  {}'.format(push.stdout.split('\n')))
+                                        self.message('  {}'.format(push.stdout.split('\n')[0]))
                                 else:
                                     if commit.stdout == '':
                                         self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
