@@ -86,6 +86,7 @@ class Settings(dict):
                 key, val = line.split('=')
                 if key.strip() != '':
                     setattr(self, '_'+key.strip().lower(), val.strip())
+
     def version(self):
         """ return gitcat version """
         return 'git cat version {}'.format(self._version)
@@ -119,7 +120,7 @@ class Git:
      - stdout     the stderr from the subprocess command
      Both stdout and stderr are decoded and stripped.
     """
-    def __init__(self, rep, command, options=None):
+    def __init__(self, rep, command, options=''):
         """ run a git command and wrap the return values for later use """
         git = subprocess.run(
             'git {} {}'.format(command, options).strip(),
@@ -182,7 +183,7 @@ class GitCat:
     """
 
     def __init__(self, options):
-        self.filename = options.catalogue
+        self.gitcatrc = options.catalogue
         self.options = options
         self.prefix = options.prefix
         self.quiet = options.quiet
@@ -213,7 +214,7 @@ class GitCat:
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.stdout != '':
             commit_message = 'git cat: updating '+changed_files.stdout.replace('\n', ' ')
-            commit = '-a --message="{}"'.format(commit_message)
+            commit = '--all --message="{}"'.format(commit_message)
             if self.options.dry_run:
                 commit += ' --porcelain'
             return Git(rep, 'commit', commit)
@@ -299,7 +300,7 @@ class GitCat:
         '''
         self.catalogue = {}
         try:
-            with open(self.filename, 'r') as catalogue:
+            with open(self.gitcatrc, 'r') as catalogue:
                 for line in catalogue:
                     if ' = ' in line:
                         dir, rep = line.split(' = ')
@@ -311,7 +312,7 @@ class GitCat:
                         else:
                             self.catalogue[dir] = rep.strip()
         except (FileNotFoundError, IOError):
-            self.error_message('there was a problem reading the catalogue file {}'.format(self.filename))
+            self.error_message('there was a problem reading the catalogue file {}'.format(self.gitcatrc))
 
         # set the maximum length of a catalogue key
         try:
@@ -323,7 +324,7 @@ class GitCat:
         r'''
         Save the catalogue of git repositories to sync
         '''
-        with open(self.filename, 'w') as catalogue:
+        with open(self.gitcatrc, 'w') as catalogue:
             catalogue.write('# List of git repositories to sync using gitcat\n\n')
             if self.prefix != os.environ['HOME']:
                 print('prefix = {}\n\n'.format(self.prefix))
@@ -423,6 +424,11 @@ class GitCat:
             self.catalogue[dir] = rep
             self.save_catalogue()
             self.message('Adding {} to the catalogue'.format(dir))
+            # check to see if the gitcatrc is in a git repository and, if so,
+            # add a commit message
+            catdir = os.path.dirname(self.gitcatrc)
+            if self.is_git_repository(catdir):
+                Git(dir, 'commit', '--all --message="{}"'.format('Adding {} to gitcatrc'.format(dir)))
 
     def branch(self):
         r'''
@@ -624,6 +630,11 @@ class GitCat:
             # remove directory
             self.message('Removing directory {}'.format(dir))
             shutil.rmtree(dir)
+            # check to see if the gitcatrc is in a git repository and, if so,
+            # add a commit message
+            catdir = os.path.dirname(self.gitcatrc)
+            if self.is_git_repository(catdir):
+                Git(dir, 'commit', '--all --message "{}"'.format('Removing {} from gitcatrc'.format(dir)))
 
     def status(self):
         r'''
