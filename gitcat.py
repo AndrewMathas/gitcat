@@ -39,14 +39,21 @@ Author
 Andrew Mathas
 (c) Copyright 2018
 
-Todo:
+TODO:
     - README file/documentation
     - debugging and testing...
-    - make git command work
+    - make "git cat git" command work
+    - make "git cat pull" first update the repository containing the gitcatrc file and
+      then reread it
+    - add a "git cat --set-as-defaults cmd [options]" option to set defaults
+      for a given command and then store the information into the gitcatrc
+      file. Will need to be clever to avoid code duplication...possibly add all
+      of the command-line options to the settings class and then use it to
+      automatically generate the command line options
+    - fix pull strategy options
 
 Licence
 -------
-
 GNU General Public License, Version 3, 29 June 2007
 
 This program is free software: you can redistribute it and/or modify it under
@@ -79,6 +86,8 @@ class Settings(dict):
     r"""
     A dummy class for reading and storing key-value pairs that are read from a file
     """
+    DEBUGGING = False
+
     def __init__(self, filename):
         super().__init__()
         with open(filename, 'r') as meta:
@@ -91,12 +100,18 @@ class Settings(dict):
         """ return gitcat version """
         return 'git cat version {}'.format(self._version)
 
+    def command_line_options(self):
+        r'''
+        Set the command line options using argparse and specifications
+        in `self.options`.
+        '''
+        pass
+
 settings = Settings(os.path.join(os.path.dirname(__file__), 'gitcat.ini'))
 
-DEBUGGING = False
 def Debugging(message):
     """ print a debugging message if `debugging` is true"""
-    if DEBUGGING:
+    if settings.DEBUGGING:
         print(message)
 
 # ---------------------------------------------------------------------------------------
@@ -131,19 +146,18 @@ class Git:
         # store the output
         self.rep = rep
         self.returncode = git.returncode
-        self.stderr = git.stderr.decode().strip()
-        self.stdout = git.stdout.decode().strip()
         self.command = command + ' ' + options
 
-        if self.returncode != 0 or self.stderr != '':
+        if self.returncode != 0:
             print('{}: there was an error using git {}\n  {}\n'.format(
                 rep,
                 command,
-                self.stderr.replace('\n', '\n  '),
+                git.stderr.decode().strip().replace('\n', '\n  '),
             ))
             self.git_command_ok = False
         else:
             self.git_command_ok = True
+        self.stdout = (git.stdout.decode().strip()+'\n'+git.stderr.decode().strip()).strip()
 
         Debugging('{}'.format(self))
 
@@ -153,13 +167,12 @@ class Git:
 
     def __repr__(self):
         """ define a __repr__ method for debugging """
-        return 'Git({})\n    rep={}, OK={}, returncode={}\n    stdout: {}\n    stderr: {}.'.format(
+        return 'Git({})\n    rep={}, OK={}, returncode={}\n    stdout: {}.'.format(
             self.command,
             self.rep,
             self.git_command_ok,
             self.returncode,
             self.stdout.replace('\n', '\n          '),
-            self.stderr.replace('\n', '\n          ')
         )
 
 # ---------------------------------------------------------------------------------------
@@ -276,14 +289,14 @@ class GitCat:
             if option.startswith('git_'):
                 opt = option[4:].replace('_', '-')
                 val = getattr(self.options, option)
-                if val in (True, False, None):
+                if val is True:
                     options += ' --'+opt
                 elif isinstance(val, list):
                     options += ' --{}={}'.format(opt, ','.join(val))
-                elif val is not False:
+                elif isinstance(val, str):
                     options += ' --{}={}'.format(opt, val)
                 else:
-                    self.error_message('unknown value {} for option {}'.format(val, option))
+                    Debugging('unknown value {} for option {}'.format(val, option))
         return options
 
     def read_catalogue(self):
@@ -402,7 +415,7 @@ class GitCat:
         if not root:
             self.error_message('{} is not a git repository:\n  {}'.format(
                 dir,
-                root.stderr.replace('\n', '\n  ')
+                root.stdout.replace('\n', '\n  ')
                 )
             )
 
@@ -410,7 +423,7 @@ class GitCat:
         if not rep:
             self.error_message('Unable to find remote repository for {} :\n  {}'.format(
                 dir,
-                rep.stderr.replace('\n', '\n  ')
+                rep.stdout.replace('\n', '\n  ')
                 )
             )
 
@@ -424,6 +437,7 @@ class GitCat:
             self.catalogue[dir] = rep
             self.save_catalogue()
             self.message('Adding {} to the catalogue'.format(dir))
+
             # check to see if the gitcatrc is in a git repository and, if so,
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
@@ -555,7 +569,6 @@ class GitCat:
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
         options = self.process_options('-q --progress')
-        print('options={}'.format(options))
         for rep in self.repositories():
             Debugging('PULLING '+rep)
             dir = self.expand_path(rep)
@@ -566,7 +579,7 @@ class GitCat:
                     if stdout == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, stdout.replace('\n', '\n  '))
+                        self.rep_message(rep, 'pulling\n  '+stdout.replace('\n', '\n  '))
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -580,7 +593,7 @@ class GitCat:
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
-                Debugging('Continuning with push')
+                Debugging('Continuing with push')
                 commit = self.commit_repository(rep)
                 if commit:
                     if commit.stdout != '':
@@ -598,9 +611,9 @@ class GitCat:
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     if commit.stdout == '':
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
+                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')))
                                     else:
-                                        self.message('  {}'.format(push.stdout.split('\n')[0]))
+                                        self.message('  {}'.format(push.stdout.split('\n')))
                                 else:
                                     if commit.stdout == '':
                                         self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
@@ -630,6 +643,7 @@ class GitCat:
             # remove directory
             self.message('Removing directory {}'.format(dir))
             shutil.rmtree(dir)
+
             # check to see if the gitcatrc is in a git repository and, if so,
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
@@ -772,7 +786,7 @@ class CollectArguments(argparse.Action):
 # ---------------------------------------------------------------------------------------
 def main():
     # allow the command line options to change the DEBUGGING flag
-    global DEBUGGING
+    global settings
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
@@ -975,7 +989,7 @@ def main():
                       dest='git_tags',
                       help='Pull all refs under refs/tags'
     )
-    # shothands for merge strategies
+    # shorthands for merge strategies
     pull.add_argument('-s', '--strategy',
                       nargs='?', type=str,
                       action='append',
@@ -1061,7 +1075,7 @@ def main():
                         help='optionally filter repositories for status')
 
     options = parser.parse_args()
-    DEBUGGING = options.debugging
+    settings.DEBUGGING = options.debugging
     if options.command is None:
         parser.print_help()
         sys.exit(1)
