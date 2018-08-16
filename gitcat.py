@@ -297,7 +297,7 @@ class GitCat:
                 elif isinstance(val, str):
                     options += ' --{}={}'.format(opt, val)
                 else:
-                    Debugging('unknown value {} for option {}'.format(val, option))
+                    Debugging('option {}={} ignored'.format(option, val))
         return options
 
     def read_catalogue(self):
@@ -608,12 +608,12 @@ class GitCat:
 
                         if push:
                             if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
-                                if commit.stdout == '':
+                                if commit.stdout == '' and 'up to date' not in commit.stdout:
                                     self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
                                 else:
                                     self.message('  {}'.format(push.stdout.split('\n')[0]))
                             else:
-                                if commit.stdout == '':
+                                if commit.stdout == '' and 'up to date' not in commit.stdout:
                                     self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
                                 else:
                                     self.message('  {}'.format(push.stdout.replace('\n', '\n  ')))
