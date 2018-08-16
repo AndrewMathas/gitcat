@@ -602,23 +602,20 @@ class GitCat:
                     if push:
                         if '[up to date]' in push.stdout:
                             self.rep_message(rep, 'up to date')
-                        elif self.options.dry_run:
-                            self.rep_message(rep,
-                                'dry-run\n {}'.format(push.stdout.replace('\n', '\n  '))
-                            )
-                        else:
+                        elif not self.options.dry_run:
                             push = Git(rep, 'push', options)
-                            if push:
-                                if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
-                                    if commit.stdout == '':
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
-                                    else:
-                                        self.message('  {}'.format(push.stdout.split('\n')[0]))
+
+                        if push:
+                            if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
+                                if commit.stdout == '':
+                                    self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
                                 else:
-                                    if commit.stdout == '':
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
-                                    else:
-                                        self.message('  {}'.format(push.stdout.replace('\n', '\n  ')))
+                                    self.message('  {}'.format(push.stdout.split('\n')[0]))
+                            else:
+                                if commit.stdout == '':
+                                    self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
+                                else:
+                                    self.message('  {}'.format(push.stdout.replace('\n', '\n  ')))
 
             else:
                 self.rep_message(rep, 'not on system')
