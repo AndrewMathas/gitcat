@@ -588,7 +588,7 @@ class GitCat:
         Run through all repositories and push them to bitbucket if their directories
         exist on this computer. Commit the repository if it has changes
         '''
-        options = self.process_options('--porcelain')
+        options = self.process_options('--porcelain --follow-tags')
         for rep in self.repositories():
             Debugging('\nPUSHING '+rep)
             dir = self.expand_path(rep)
@@ -598,7 +598,7 @@ class GitCat:
                 if commit:
                     if commit.stdout != '':
                         self.rep_message(rep, 'commit\n {}'.format(commit.stdout.replace('\n', '\n  ')))
-                    push = Git(rep, 'push', '--follow-tags --dry-run --porcelain')
+                    push = Git(rep, 'push', options+' --dry-run')
                     if push:
                         if '[up to date]' in push.stdout:
                             self.rep_message(rep, 'up to date')
@@ -607,13 +607,13 @@ class GitCat:
                                 'dry-run\n {}'.format(push.stdout.replace('\n', '\n  '))
                             )
                         else:
-                            push = Git(rep, 'push', '--follow-tags --porcelain')
+                            push = Git(rep, 'push', options)
                             if push:
                                 if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
                                     if commit.stdout == '':
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')))
+                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
                                     else:
-                                        self.message('  {}'.format(push.stdout.split('\n')))
+                                        self.message('  {}'.format(push.stdout.split('\n')[0]))
                                 else:
                                     if commit.stdout == '':
                                         self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
