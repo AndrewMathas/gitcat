@@ -51,6 +51,7 @@ TODO:
       of the command-line options to the settings class and then use it to
       automatically generate the command line options
     - fix pull strategy options
+    - stop sutomatically sorting catalogue
 
 Licence
 -------
