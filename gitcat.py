@@ -780,7 +780,7 @@ def main():
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
-        #add_        help=False,
+        #add_help=False,
         description='Simultaneously push and pull to a catalogue of remote git repositories',
         formatter_class=CustomHelpFormatter,
         prog='git cat',
