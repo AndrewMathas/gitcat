@@ -598,7 +598,7 @@ class GitCat:
                             push = Git(rep, 'push', options)
 
                             if push:
-                                if push.output.startswith('  To ') and push.poutput.endswith('Done'):
+                                if push.output.startswith('  To ') and push.output.endswith('Done'):
                                     if commit.output == '' and 'up to date' not in commit.output:
                                         self.rep_message(rep, 'pushed\n'+push.output)
                                     else:
