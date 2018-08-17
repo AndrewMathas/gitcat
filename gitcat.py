@@ -132,9 +132,7 @@ class Git:
     The class that is return has attributes:
      - rep        the catalogue key for the respeoctory
      - returncode the return code from the subprocess command
-     - stdout     the output from the subprocess command
-     - stdout     the stderr from the subprocess command
-     Both stdout and stderr are decoded and stripped.
+     - output     the stdout and stderr output from the subprocess command
     """
     def __init__(self, rep, command, options=''):
         """ run a git command and wrap the return values for later use """
@@ -158,8 +156,12 @@ class Git:
             self.git_command_ok = False
         else:
             self.git_command_ok = True
-        self.stdout = (git.stdout.decode().strip()+'\n'+git.stderr.decode().strip()).strip()
 
+        # output is indented two spaces and has no blank lines
+        self.output = '\n'.join('  '+lin.strip()
+             for lin in git.stdout.decode().strip().split('\n')+git.stderr.decode().strip().split('\n')
+               if lin != ''
+        )
         Debugging('{}'.format(self))
 
     def __bool__(self):
@@ -168,12 +170,12 @@ class Git:
 
     def __repr__(self):
         """ define a __repr__ method for debugging """
-        return 'Git({})\n    rep={}, OK={}, returncode={}\n    stdout: {}.'.format(
+        return 'Git({})\n    rep={}, OK={}, returncode={}\n    output: {}.'.format(
             self.command,
             self.rep,
             self.git_command_ok,
             self.returncode,
-            self.stdout.replace('\n', '\n          '),
+            self.output.replace('\n', '\n  '),
         )
 
 # ---------------------------------------------------------------------------------------
@@ -224,10 +226,10 @@ class GitCat:
         The commit message is a list of the files being changed. Return
         the Git() record of the commit.
         '''
-        Debugging('COMMIT rep='+rep)
+        Debugging('\nCOMMIT rep='+rep)
         changed_files = self.changed_files(rep)
-        if changed_files and changed_files.stdout != '':
-            commit_message = 'git cat: updating '+changed_files.stdout.replace('\n', ' ')
+        if changed_files and changed_files.output != '':
+            commit_message = 'git cat: updating '+changed_files.output
             commit = '--all --message="{}"'.format(commit_message)
             if self.options.dry_run:
                 commit += ' --porcelain'
@@ -256,12 +258,12 @@ class GitCat:
         part of testing for a repository the current working directory is also
         changed to `dir`.
         '''
-        Debugging('CHECKING for git dir={}'.format(dir))
+        Debugging('\nCHECKING for git dir={}'.format(dir))
         if os.path.isdir(dir):
             os.chdir(dir)
             rep = dir.replace(self.prefix+'/', '')
             is_git = Git(rep, 'rev-parse', '--is-inside-work-tree')
-            return is_git.returncode == 0 and 'true' in is_git.stdout
+            return is_git.returncode == 0 and 'true' in is_git.output
 
         return False
 
@@ -415,21 +417,17 @@ class GitCat:
         root = Git(dir, 'root')
         if not root:
             self.error_message('{} is not a git repository:\n  {}'.format(
-                dir,
-                root.stdout.replace('\n', '\n  ')
-                )
+                dir, root.output)
             )
 
         rep = Git(dir, 'remote', 'get-url --push origin')
         if not rep:
             self.error_message('Unable to find remote repository for {} :\n  {}'.format(
-                dir,
-                rep.stdout.replace('\n', '\n  ')
-                )
+                dir, rep.output)
             )
 
-        dir = self.short_path(root.stdout)
-        rep = rep.stdout
+        dir = self.short_path(root.output)
+        rep = rep.output
         if dir in self.catalogue:
             # give an error if repository is already in the catalogue
             self.error_message('the git repository in {} is already in the catalogue'.format(dir))
@@ -454,16 +452,15 @@ class GitCat:
         # have to work harder to extract information about the pull
         options = self.process_options('--verbose')
         for rep in self.repositories():
-            Debugging('BRANCH '+rep)
+            Debugging('\nBRANCH '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 pull = Git(rep, 'branch', options)
                 if pull:
-                    stdout = pull.stdout.split('\n')[1:]
-                    if stdout == '':
+                    if '\n' not in pull.output:
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, '\n'+'\n'.join(stdout))
+                        self.rep_message(rep, pull.output[pull.output.index('\n'):])
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -481,7 +478,7 @@ class GitCat:
         well.
         '''
         for rep in self.repositories():
-            Debugging('COMMITTING '+rep)
+            Debugging('\nCOMMITTING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 self.commit_repository(rep)
@@ -494,17 +491,13 @@ class GitCat:
         options = self.process_options()
         options += ' HEAD'
         for rep in self.repositories():
-            Debugging('DIFFING '+rep)
+            Debugging('\nDIFFING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 diff = Git(rep, 'diff' 'options')
                 if diff:
-                    if diff.stdout != '':
-                        self.rep_message(
-                            rep,
-                            '\n  {}'.format('\n  '.join(f for f in diff.stdout.split('\n') if f != '')),
-                            quiet=False
-                        )
+                    if diff.output != '':
+                        self.rep_message(rep, diff.output, quiet=False)
                     else:
                         self.rep_message(rep, 'up to date')
 
@@ -517,16 +510,15 @@ class GitCat:
         # have to work harder to extract information about the pull
         options = self.process_options('-q --progress')
         for rep in self.repositories():
-            Debugging('FETCHING '+rep)
+            Debugging('\nFETCHING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 pull = Git(rep, 'fetch', options)
                 if pull:
-                    stdout = pull.stdout
-                    if stdout == '':
+                    if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, stdout.replace('\n', '\n  '))
+                        self.rep_message(rep, pull.output)
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -534,7 +526,7 @@ class GitCat:
         r''' Run git commands on every repository in the catalogue '''
         git_command = '{}'.format(' '.join(cmd for cmd in commands))
         for rep in self.repositories():
-            Debugging('GITTING '+rep)
+            Debugging('\nGITTING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 print('Repository = {}, command = {}'.format(rep, git_command))
@@ -545,7 +537,7 @@ class GitCat:
         Install some or all of the repositories in the catalogue
         '''
         for rep in self.repositories():
-            Debugging('INSTALLING '+rep)
+            Debugging('\nINSTALLING '+rep)
             dir = self.expand_path(rep)
             if not os.path.exists(dir):
                 self.rep_message(rep, 'installing')
@@ -571,16 +563,15 @@ class GitCat:
         # have to work harder to extract information about the pull
         options = self.process_options('-q --progress')
         for rep in self.repositories():
-            Debugging('PULLING '+rep)
+            Debugging('\nPULLING '+rep)
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
                 pull = Git(rep, 'pull', options)
                 if pull:
-                    stdout = pull.stdout
-                    if stdout == '':
+                    if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, 'pulling\n  '+stdout.replace('\n', '\n  '))
+                        self.rep_message(rep, 'pulling\n'+pull.output)
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -597,26 +588,26 @@ class GitCat:
                 Debugging('Continuing with push')
                 commit = self.commit_repository(rep)
                 if commit:
-                    if commit.stdout != '':
-                        self.rep_message(rep, 'commit\n {}'.format(commit.stdout.replace('\n', '\n  ')))
+                    if commit.output != '':
+                        self.rep_message(rep, 'commit\n'+commit.output)
                     push = Git(rep, 'push', options+' --dry-run')
                     if push:
-                        if '[up to date]' in push.stdout:
+                        if '[up to date]' in push.output:
                             self.rep_message(rep, 'up to date')
                         elif not self.options.dry_run:
                             push = Git(rep, 'push', options)
 
                             if push:
-                                if push.stdout.startswith('To ') and push.stdout.endswith('Done'):
-                                    if commit.stdout == '' and 'up to date' not in commit.stdout:
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.split('\n')[0]))
+                                if push.output.startswith('  To ') and push.poutput.endswith('Done'):
+                                    if commit.output == '' and 'up to date' not in commit.output:
+                                        self.rep_message(rep, 'pushed\n'+push.output)
                                     else:
-                                        self.message('  {}'.format(push.stdout.split('\n')[0]))
+                                        self.message('  {}'+push.output.split('\n')[0])
                                 else:
-                                    if commit.stdout == '' and 'up to date' not in commit.stdout:
-                                        self.rep_message(rep, 'pushed\n  {}'.format(push.stdout.replace('\n', '\n  ')))
+                                    if commit.output == '' and 'up to date' not in commit.output:
+                                        self.rep_message(rep, 'pushed\n'+push.output)
                                     else:
-                                        self.message('  {}'.format(push.stdout.replace('\n', '\n  ')))
+                                        self.message(push.output)
 
             else:
                 self.rep_message(rep, 'not on system')
@@ -656,7 +647,7 @@ class GitCat:
         diff_options = '--shortstat --no-color'
 
         for rep in self.repositories():
-            Debugging('STATUS for {}'.format(rep))
+            Debugging('\nSTATUS for {}'.format(rep))
             dir = self.expand_path(rep)
             if self.is_git_repository(dir):
 
@@ -667,27 +658,28 @@ class GitCat:
                     # use status to work out relative changes
                     status = Git(rep, 'status', status_options)
                     if status:
-                        stdout = status.stdout.split('\n')
-                        changes = ahead_behind.search(stdout.pop(0))
+                        if '\n' in status.output:
+                            status.output = status.output[status.output.index('\n')+1:]
+                        elif status.output.startswith('  ##'):
+                            status.output = ''
+
+                        changes = ahead_behind.search(status.output)
                         changes = '' if changes is None else changes.group()[1:-1]
 
                         # use diff to work out which files have changed
-                        changed = ''
                         diff = Git(rep, 'diff', diff_options)
+                        changed = ''
                         if diff:
-                            changed = files_changed.search(diff.stdout)
+                            changed = files_changed.search(diff.output)
                             changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
+
+                        Debugging('changes = {}\nchanged={}\nstatus={}'.format(changes, changed, status.output))
 
                         if changes != '':
                             changed += changes if changed == '' else ', '+changes
 
-                        Debugging('Status: changed={}\nStdout: '.format(changed, '\n        '.join(stdout)))
-                        if stdout != []:
-                            self.rep_message(
-                                rep,
-                                '{}\n  {}'.format(changed, '\n  '.join(lin for lin in stdout)),
-                                quiet=False
-                            )
+                        if status.output != '':
+                            self.rep_message(rep, changed+'\n'+status.output, quiet=False)
                         elif changed != '':
                             self.rep_message(rep, changed, quiet=False)
                         else:
