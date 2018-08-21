@@ -51,7 +51,7 @@ TODO:
       of the command-line options to the settings class and then use it to
       automatically generate the command line options
     - fix pull strategy options
-    - stop sutomatically sorting catalogue
+    - do not automatically sort catalogue
 
 Licence
 -------
@@ -162,7 +162,7 @@ class Git:
              for lin in git.stdout.decode().strip().split('\n')+git.stderr.decode().strip().split('\n')
                if lin != ''
         )
-        Debugging('{}'.format(self))
+        Debugging('{}\nstdout={}\nstderr={}'.format(self,git.stdout,git.stderr))
 
     def __bool__(self):
         ''' return 'self.is_ok` '''
@@ -374,7 +374,9 @@ class GitCat:
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
         if not self.quiet:
+            Debugging('-'*40)
             print(message, end=ending)
+            Debugging('-'*40)
 
     def quiet_message(self, message, ending=None):
         r'''
@@ -382,19 +384,22 @@ class GitCat:
         as the, well, ending. If `self.quiet` is `True` then do nothing.
         '''
         if self.quiet:
+            Debugging('-'*40)
             print(message, end=ending)
+            Debugging('-'*40)
 
     def rep_message(self, rep, message='', quiet=True, ending=None):
         r'''
         If `self.quiet` is `True` then print `message` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
-        Debugging('rep message: quiet={}, self.quiet={} and quietness={}'.format(
-                  quiet, self.quiet, not(quiet and self.quiet)
+        Debugging('rep message: quiet={}, self.quiet={} and quietness={}\n{}'.format(
+                  quiet, self.quiet, not(quiet and self.quiet),'-'*40
                  )
         )
         if not(quiet and self.quiet):
             print('{:<{max}} {}'.format(rep, message, max=self.max, end=ending))
+            Debugging('-'*40)
 
     # ---------------------------------------------------------------------------------------
     # Now implement the git cat commands available from the command line
