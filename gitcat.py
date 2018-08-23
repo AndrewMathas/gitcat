@@ -39,20 +39,6 @@ Author
 Andrew Mathas
 (c) Copyright 2018
 
-TODO:
-    - README file/documentation
-    - debugging and testing...
-    - make "git cat git" command work
-    - make "git cat pull" first update the repository containing the gitcatrc file and
-      then reread it
-    - add a "git cat --set-as-defaults cmd [options]" option to set defaults
-      for a given command and then store the information into the gitcatrc
-      file. Will need to be clever to avoid code duplication...possibly add all
-      of the command-line options to the settings class and then use it to
-      automatically generate the command line options
-    - fix pull strategy options
-    - do not automatically sort catalogue
-
 Licence
 -------
 GNU General Public License, Version 3, 29 June 2007
@@ -68,6 +54,21 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 '''
 
+# ---------------------------------------------------------------------------------------
+# TODO:
+#   - README file/documentation
+#   - debugging and testing...
+#   - make "git cat git" command work
+#   - make "git cat pull" first update the repository containing the gitcatrc file and
+#     then reread it
+#   - add a "git cat --set-as-defaults cmd [options]" option to set defaults
+#     for a given command and then store the information into the gitcatrc
+#     file. Will need to be clever to avoid code duplication...possibly add all
+#     of the command-line options to the settings class and then use it to
+#     automatically generate the command line options
+#   - fix pull strategy options
+#   - do not automatically sort catalogue
+
 import argparse
 import itertools
 import os
@@ -76,10 +77,81 @@ import shutil
 import subprocess
 import sys
 
-# ---------------------------------------------------------------------------------------
-# To do:
-#   - allow git cat commands to apply to subset of repositories
-#   - display pull and push messages
+class Option:
+    '''
+    A keyword-value container
+    '''
+    def __init__(self, **kwargs):
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
+
+class CommandLineOptions:
+    '''
+    An argparse helper class for synchronising the git-cat options and their
+    defaults with the settings in the rc file.  This is used to both set the
+    default options and to automatically generate them in main() using
+    argparse>
+    '''
+
+    # a dictionary of the git commands supported with their help messages
+    commands = dict(
+        branch = Option(help='List local and remote branches together with last commit message'),
+        commit = Option(help='Commit all uncommitted repositories in the catalogue'),
+        diff   = Option(help='Print a diff of the changes in each repository'),
+        fetch  = Option(help='Fetch all repositories in the catalogue'),
+        pull   = Option(help='Pull all repositories in the catalogue'),
+        push   = Option(help='Push all repositories in the catalogue to their remote repositories'),
+        status = Option(help='Print the status of each repository in the catalogue')
+    )
+    def __init__(self):
+        # initialise an empty list of options for each command
+        for cmd in self.commands:
+            self.commands[cmd].options = []
+
+    def add_option(self,
+        command,             # the git-cat command name
+        option,              # the name of the option
+        help,                # help for option
+        default=False,       # default value
+        action='store_true', # default action
+        shorthand=None,      # the option shorthand (default option[0])
+        choices=None
+        ):
+        '''
+        Add a command-line to the list of options for command
+        '''
+        self.commands[command].options.append(Option(
+            long_option=option,
+            short_hand = option[0] if shorthand is None else shorthand,
+            git_cat_default = default,
+            default = default,
+            action = action,
+            choices = choice
+        ))
+
+    def add_argparse_options(self, subparser):
+        '''
+        Generate all of the git-cat command options as parsers of `subparser`
+        '''
+        for cmd in self.commands:
+            cmd = subparser.add_parser(cmd, help=self.commands[command]['help'])
+            for option in self.commands[cmd].options:
+                cmd.add_argument(
+                    '-'+option.short_hand,
+                    '--'+option.long_option,
+                    action=option.action,
+                    default=option.default,
+                    dest='git_'+option.long_option,
+                    help=option.help
+                )
+            # finally, add the optional repository filter option
+            cmd.add_argument(
+                dest='repositories',
+                type=str,
+                default='',
+                nargs='?',
+                help='optionally filter repositories for status'
+            )
 
 # ---------------------------------------------------------------------------------------
 # settings
@@ -91,6 +163,7 @@ class Settings(dict):
 
     def __init__(self, filename):
         super().__init__()
+        self.options = CommandLineOptions()
         with open(filename, 'r') as meta:
             for line in meta:
                 key, val = line.split('=')
@@ -790,8 +863,10 @@ def main():
         formatter_class=CustomHelpFormatter,
         prog='git cat',
     )
-    parser._positionals.title = 'Commands'
-    parser._optionals.title = 'Optional arguments'
+
+    # ---------------------------------------------------------------------------------------
+    # catalogue options
+    # ---------------------------------------------------------------------------------------
 
     parser.add_argument('-c', '--catalogue', type=str, default=RC_FILE,
                         help='specify the catalogue of bitbucket repositories'
@@ -802,6 +877,11 @@ def main():
     parser.add_argument('-q', '--quiet', action='store_true', default=False,
                         help='print messages'
     )
+    parser.add_argument('-s', '--set-as-default', action='store_true', default=False,
+                        help='use the current options as the default'
+    )
+
+    # help suppressed options
     parser.add_argument('--debugging',
                         action='store_true',
                         default=False,
@@ -815,6 +895,12 @@ def main():
 
     subparsers = parser.add_subparsers(help='Subcommand to run', dest='command')
 
+    # ---------------------------------------------------------------------------------------
+    # catalogue commands
+    # ---------------------------------------------------------------------------------------
+    parser._positionals.title = 'Commands'
+    parser._optionals.title = 'Optional arguments'
+
     add = subparsers.add_parser('add', help='Add repository to the catalogue')
     add.add_argument('repository',
                      type=str,
@@ -822,6 +908,47 @@ def main():
                      default=os.getcwd(),
                      help='Name of repository to add'
     )
+
+    install = subparsers.add_parser('install', help='Install all repositories in the catalogue')
+    install.add_argument('install_reps',
+                         type=str,
+                         nargs='?',
+                         help='Install only specified repository'
+    )
+    install.add_argument('-d', '--dry-run',
+                         action='store_true',
+                         default=False,
+                         help='Do everything except actually send the updates'
+    )
+    install.add_argument('-q', '--quiet',
+                         action='store_true',
+                         default=False,
+                         help='print messages'
+    )
+    install.add_argument(dest='repositories', type=str, default='', nargs='?',
+                         help='optionally filter the repositories to install')
+
+    ls = subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
+    ls.add_argument(dest='repositories', type=str, default='', nargs='?',
+                    help='optionally filter the repositories to list'
+    )
+
+    remove = subparsers.add_parser('remove', help='Remove repository from the catalogue')
+    remove.add_argument('-d', '--delete',
+                        action='store_true',
+                        default=False,
+                        help='Delete directory as well'
+    )
+    remove.add_argument('repository',
+                        type=str,
+                        nargs='?',
+                        default=None,
+                        help='Name of repository to remove'
+    )
+
+    # ---------------------------------------------------------------------------------------
+    # git commands
+    # ---------------------------------------------------------------------------------------
 
     # options with destinations of the form git_<name> designate command line
     # options for git that gitcat will pass through for the relevant command
@@ -875,7 +1002,7 @@ def main():
     diff.add_argument(dest='repositories', type=str, default='', nargs='?',
                       help='optionally filter the repositories to diff')
 
-    fetch = subparsers.add_parser('fetch', help='Pull all repositories in the catalogue')
+    fetch = subparsers.add_parser('fetch', help='Fetch all repositories in the catalogue')
     fetch.add_argument('--all',
                       action='store_true',
                       default=False,
@@ -921,30 +1048,6 @@ def main():
 #        action = CollectArguments,
 #        help='Run git commands on all repositories'
 #    )
-
-    install = subparsers.add_parser('install', help='Install all repositories in the catalogue')
-    install.add_argument('install_reps',
-                         type=str,
-                         nargs='?',
-                         help='Install only specified repository'
-    )
-    install.add_argument('-d', '--dry-run',
-                         action='store_true',
-                         default=False,
-                         help='Do everything except actually send the updates'
-    )
-    install.add_argument('-q', '--quiet',
-                         action='store_true',
-                         default=False,
-                         help='print messages'
-    )
-    install.add_argument(dest='repositories', type=str, default='', nargs='?',
-                         help='optionally filter the repositories to install')
-
-    ls = subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
-    ls.add_argument(dest='repositories', type=str, default='', nargs='?',
-                    help='optionally filter the repositories to list'
-    )
 
     pull = subparsers.add_parser('pull', help='Pull all repositories in the catalogue')
     pull.add_argument('--all',
@@ -1033,19 +1136,6 @@ def main():
                       help='Print messages each time a repository is pushed')
     push.add_argument(dest='repositories', type=str, default='', nargs='?',
                       help='optionally filter the repositories to push')
-
-    remove = subparsers.add_parser('remove', help='Remove repository from the catalogue')
-    remove.add_argument('-d', '--delete',
-                        action='store_true',
-                        default=False,
-                        help='Delete directory as well'
-    )
-    remove.add_argument('repository',
-                        type=str,
-                        nargs='?',
-                        default=None,
-                        help='Name of repository to remove'
-    )
 
     status = subparsers.add_parser('status',
                                    help='Print the status of each repository in the catalogue'
