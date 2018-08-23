@@ -221,19 +221,23 @@ class Git:
         self.command = command + ' ' + options
 
         if self.returncode != 0:
+            Debugging('-'*40)
             print('{}: there was an error using git {}\n  {}\n'.format(
                 rep,
                 command,
-                git.stderr.decode().strip().replace('\n', '\n  '),
+                git.stderr.decode().strip().replace('\n', '\n  ').replace('\r','\n  '),
             ))
+            Debugging('-'*40)
             self.git_command_ok = False
         else:
             self.git_command_ok = True
 
         # output is indented two spaces and has no blank lines
+        self.output = git.stdout.decode()
         self.output = '\n'.join('  '+lin.strip()
-             for lin in git.stdout.decode().strip().split('\n')+git.stderr.decode().strip().split('\n')
-               if lin != ''
+             for lin in (git.stdout.decode().replace('\r','n').strip().split('\n')
+                        +git.stderr.decode().replace('\r','n').strip().split('\n'))
+                 if lin != ''
         )
         Debugging('{}\nstdout={}\nstderr={}'.format(self,git.stdout,git.stderr))
 
@@ -651,7 +655,7 @@ class GitCat:
                     else:
                         self.rep_message(rep, 'pulling\n'+pull.output)
             else:
-                self.rep_message(rep, 'not on system')
+                self.rep_message(rep, 'repository not installed')
 
     def push(self):
         r'''
