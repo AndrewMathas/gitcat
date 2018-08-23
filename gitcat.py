@@ -67,7 +67,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #     of the command-line options to the settings class and then use it to
 #     automatically generate the command line options
 #   - fix pull strategy options
-#   - do not automatically sort catalogue
+#   - add options for sorting catalogue
 
 import argparse
 import itertools
@@ -430,12 +430,12 @@ class GitCat:
         ''' return the list of repositories to iterate over by
             filtering by options.repositories
         '''
-        # if there is no filter then return the sorted catalogue keys
+        # if there is no filter then return the catalogue keys
         if not hasattr(self.options, 'repositories'):
-            return sorted(self.catalogue.keys())
+            return self.catalogue.keys()
 
         repositories = re.compile(self.options.repositories)
-        return sorted(filter(repositories.search, self.catalogue.keys()))
+        return filter(repositories.search, self.catalogue.keys())
 
     # ---------------------------------------------------------------------------------------
     # messages
