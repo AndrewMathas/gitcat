@@ -1,3 +1,4 @@
+include *.ini
 include *.py
 include *.rst
 include LICENSE.txt
