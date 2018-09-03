@@ -228,17 +228,18 @@ class Settings(dict):
                     else:
                         error_message('syntax error in {} on the line\n {}'.format(options_file, line))
 
+    def save_settings(self):
+        r'''
+        Return a string for setting the non-standard settings in the gitcatrc file
+        '''
+        settings = ''
+        if self.prefix != os.environ['HOME']:
+            settings += 'prefix = {}\n'.format(self.prefix)
+        return settings
+
     def version(self):
         """ return gitcat version """
         return 'git cat version {}'.format(self._version)
-
-    def command_line_options(self):
-        r'''
-        Set the command line options using argparse and specifications
-        in `self.options`.
-        '''
-        pass
-
 file = lambda f: os.path.join(os.path.dirname(__file__),  f)
 settings = Settings(file('gitcat.ini'), file('git-options.ini'))
 
@@ -393,7 +394,7 @@ class GitCat:
         r'''
         Return a string that lists the repositories in the catalogue. If
         `listing` is `False` and the repository does not exist then the
-        separator is an exclaimation mark, otherwise it is an equals sign.
+        separator is an exclamation mark, otherwise it is an equals sign.
         '''
         return '\n'.join('{dire:<{max}} {sep} {rep}'.format(
             dire=dire,
@@ -465,8 +466,6 @@ class GitCat:
         with open(self.gitcatrc, 'w') as catalogue:
             catalogue.write('# List of git repositories to sync using gitcat\n\n')
             catalogue.write(settings.save_settings())
-            if self.prefix != os.environ['HOME']:
-                print('prefix = {}\n\n'.format(self.prefix))
             catalogue.write(self.list_catalogue(listing=True))
 
     def short_path(self, dire):
@@ -474,6 +473,8 @@ class GitCat:
         Return the shortened path to the directory `dire` obtained by removing `self.prefix`
         if necessary.
         '''
+        debugging('prefix = {}.'.format(self.prefix))
+        debugging('dire = {}, prefixed={}'.format(dire, dire.startswith(self.prefix)))
         return dire[len(self.prefix)+1:] if dire.startswith(self.prefix) else dire
 
     def repositories(self):
@@ -554,8 +555,8 @@ class GitCat:
                 dire, rep.output)
             )
 
-        dire = self.short_path(root.output)
-        rep = rep.output
+        dire = self.short_path(root.output.strip())
+        rep = rep.output.strip()
         if dire in self.catalogue:
             # give an error if repository is already in the catalogue
             error_message('the git repository in {} is already in the catalogue'.format(dire))
