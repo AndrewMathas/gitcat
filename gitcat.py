@@ -537,7 +537,7 @@ class GitCat:
         else:
             dire = os.path.join(self.prefix, self.options.repository)
 
-        if not (os.path.isdire(dire) and self.is_git_repository(dire)):
+        if not (os.path.isdir(dire) and self.is_git_repository(dire)):
             error_message('{} not a git repository'.format(dire))
 
         # find the root directory for the repository and the remote URL`
