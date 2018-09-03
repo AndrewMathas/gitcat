@@ -69,6 +69,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #   - fix pull strategy options
 #   - add options for sorting catalogue
 #   - move read_catalogue and save_catalogue into Settings
+#   - make status check that changes have been pushed
 
 import argparse
 import itertools
@@ -330,7 +331,9 @@ class GitCat:
         self.options = options
         self.prefix = options.prefix
 
+        self.dry_run = False
         self.quiet = False
+
         if hasattr(options, 'git_quiet'):
             self.quiet = options.git_quiet
 
@@ -466,7 +469,7 @@ class GitCat:
         with open(self.gitcatrc, 'w') as catalogue:
             catalogue.write('# List of git repositories to sync using gitcat\n\n')
             catalogue.write(settings.save_settings())
-            catalogue.write(self.list_catalogue(listing=True))
+            catalogue.write(self.list_catalogue(listing=True)+'\n')
 
     def short_path(self, dire):
         r'''
