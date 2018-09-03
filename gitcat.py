@@ -289,7 +289,6 @@ class Git:
             self.git_command_ok = True
 
         # output is indented two spaces and has no blank lines
-        self.output = git.stdout.decode()
         self.output = '\n'.join('  '+lin.strip()
              for lin in (git.stdout.decode().replace('\r', 'n').strip().split('\n')
                         +git.stderr.decode().replace('\r', 'n').strip().split('\n'))
@@ -303,7 +302,7 @@ class Git:
 
     def __repr__(self):
         """ define a __repr__ method for debugging """
-        return 'Git({})\n    rep={}, OK={}, returncode={}\n    output: {}.'.format(
+        return 'Git({})\n  rep={}, OK={}, returncode={}\n  output={}.'.format(
             self.command,
             self.rep,
             self.git_command_ok,
@@ -790,13 +789,13 @@ class GitCat:
                     # use status to work out relative changes
                     status = Git(rep, 'status', status_options)
                     if status:
+                        changes = ahead_behind.search(status.output)
+                        changes = '' if changes is None else changes.group()[1:-1]
+
                         if '\n' in status.output:
                             status.output = status.output[status.output.index('\n')+1:]
                         elif status.output.startswith('  ##'):
                             status.output = ''
-
-                        changes = ahead_behind.search(status.output)
-                        changes = '' if changes is None else changes.group()[1:-1]
 
                         # use diff to work out which files have changed
                         diff = Git(rep, 'diff', diff_options)
