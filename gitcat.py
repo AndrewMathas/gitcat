@@ -329,10 +329,9 @@ class GitCat:
         self.options = options
         self.prefix = options.prefix
 
+        self.quiet = False
         if hasattr(options, 'git_quiet'):
-            self.quiet = options.git_quiet or options.quiet
-        else:
-            self.quiet = options.quiet
+            self.quiet = options.git_quiet
 
         if hasattr(options, 'git_dry_run'):
             self.dry_run = options.git_dry_run
@@ -913,9 +912,6 @@ def main():
     )
     parser.add_argument('-p', '--prefix', type=str, default=settings.prefix,
                         help='Prefix directory name containing all repositories'
-    )
-    parser.add_argument('-q', '--quiet', action='store_true', default=False,
-                        help='print messages'
     )
     parser.add_argument('-s', '--set-as-default', action='store_true', default=False,
                         help='use the current options for <command> as the default'
