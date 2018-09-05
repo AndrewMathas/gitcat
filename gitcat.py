@@ -56,20 +56,21 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 # ---------------------------------------------------------------------------------------
 # TODO:
-#   - README file/documentation
-#   - debugging and testing...
-#   - make "git cat git" command work
-#   - make "git cat pull" first update the repository containing the gitcatrc file and
+#  - README file/documentation
+#  - debugging and testing...
+#  - make "git cat git" command work
+#  - make "git cat pull" first update the repository containing the gitcatrc file and
 #     then reread it
-#   - add a "git cat --set-as-defaults cmd [options]" option to set defaults
+#  - add a "git cat --set-as-defaults cmd [options]" option to set defaults
 #     for a given command and then store the information into the gitcatrc
 #     file. Will need to be clever to avoid code duplication...possibly add all
 #     of the command-line options to the settings class and then use it to
 #     automatically generate the command line options
-#   - fix pull strategy options
-#   - add options for sorting catalogue
-#   - move read_catalogue and save_catalogue into Settings
-#   - make status check that changes have been pushed
+#  - fix pull strategy options
+#  - add options for sorting catalogue
+#  - move read_catalogue and save_catalogue into Settings
+#  - make status check that changes have been pushed
+#  - add a fast option
 
 import argparse
 import itertools
@@ -290,8 +291,8 @@ class Git:
 
         # output is indented two spaces and has no blank lines
         self.output = '\n'.join('  '+lin.strip()
-             for lin in (git.stdout.decode().replace('\r', 'n').strip().split('\n')
-                        +git.stderr.decode().replace('\r', 'n').strip().split('\n'))
+             for lin in (git.stdout.decode().replace('\r', '\n').strip().split('\n')
+                        +git.stderr.decode().replace('\r', '\n').strip().split('\n'))
                             if lin != ''
         )
         debugging('{}\nstdout={}\nstderr={}'.format(self, git.stdout, git.stderr))
