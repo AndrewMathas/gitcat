@@ -77,9 +77,9 @@ import itertools
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
-
 
 # ---------------------------------------------------------------------------------------
 # error messages and debugging
@@ -96,6 +96,16 @@ def debugging(message):
     """ print a debugging message if `debugging` is true"""
     if settings.DEBUGGING:
         print(message)
+
+# ---------------------------------------------------------------------------------------
+# exit gracefully on SIGINT and SIGTERM
+def graceful_exit(signal, frame):
+    print('program terminated (signal {})'.format(signal))
+    debugging('{}'.format(frame))
+    sys.exit()
+
+signal.signal(signal.SIGINT, graceful_exit)
+signal.signal(signal.SIGTERM, graceful_exit)
 
 # ---------------------------------------------------------------------------------------
 # compiled regular expressions
