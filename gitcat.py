@@ -123,6 +123,8 @@ class Settings(dict):
 
         self.git_defaults = {} # will hold non-standard git defaults
         self.prefix = os.environ['HOME']
+        self.quiet = False
+        self.dry_run = False
 
         # location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc
         # and then to ~/.gitcatrc
@@ -331,8 +333,8 @@ class GitCat:
         self.options = options
         self.prefix = options.prefix
 
-        self.dry_run = False
-        self.quiet = False
+        self.dry_run = options.dry_run
+        self.quiet = options.quiet
 
         if hasattr(options, 'git_quiet'):
             self.quiet = options.git_quiet
@@ -703,7 +705,13 @@ class GitCat:
                     if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, 'pulling\n'+pull.output)
+                        if self.quiet:
+                            self.rep_message(rep, 'pulling\n'
+                                +'\n'.join(lin for lin in pull.output.split('\n') if 'Compressing' not in lin),
+                                quiet=False
+                            )
+                        else:
+                            self.rep_message(rep, 'pulling\n'+pull.output, quiet=False)
             else:
                 self.rep_message(rep, 'repository not installed')
 
@@ -914,8 +922,14 @@ def main():
     parser.add_argument('-c', '--catalogue', type=str, default=settings.rc_file,
                         help='specify the catalogue of git repositories'
     )
+    parser.add_argument('-d', '--dry-run', type=str, default=settings.dry_run,
+                        help='Do everything except change the repository'
+    )
     parser.add_argument('-p', '--prefix', type=str, default=settings.prefix,
                         help='Prefix directory name containing all repositories'
+    )
+    parser.add_argument('-q', '--quiet', type=str, default=settings.quiet,
+                        help='Print messages only if repository changes'
     )
     parser.add_argument('-s', '--set-as-default', action='store_true', default=False,
                         help='use the current options for <command> as the default'
