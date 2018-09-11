@@ -715,13 +715,10 @@ class GitCat:
                     if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        if self.quiet:
-                            self.rep_message(rep, 'pulling\n'
-                                +'\n'.join(lin for lin in pull.output.split('\n') if 'Compressing' not in lin),
-                                quiet=False
-                            )
-                        else:
-                            self.rep_message(rep, 'pulling\n'+pull.output, quiet=False)
+                        self.rep_message(rep, 'pulling\n'
+                            +'\n'.join(lin for lin in pull.output.split('\n') if 'Compressing' not in lin),
+                            quiet=False
+                        )
             else:
                 self.rep_message(rep, 'repository not installed')
 
