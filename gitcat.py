@@ -749,7 +749,7 @@ class GitCat:
                                     if commit.output == '' and 'up to date' not in commit.output:
                                         self.rep_message(rep, 'pushed\n'+push.output)
                                     else:
-                                        self.message('  {}'+push.output.split('\n')[0])
+                                        self.message(push.output.split('\n')[0])
                                 else:
                                     if commit.output == '' and 'up to date' not in commit.output:
                                         self.rep_message(rep, 'pushed\n'+push.output)
