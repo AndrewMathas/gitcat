@@ -347,10 +347,10 @@ class GitCat:
         self.quiet = options.quiet
 
         if hasattr(options, 'git_quiet'):
-            self.quiet = options.git_quiet
+            self.quiet = self.quiet or options.git_quiet
 
         if hasattr(options, 'git_dry_run'):
-            self.dry_run = options.git_dry_run
+            self.dry_run = self.quiet or options.git_dry_run
 
         # read the catalogue from the rc file
         self.read_catalogue()
@@ -929,13 +929,13 @@ def main():
     parser.add_argument('-c', '--catalogue', type=str, default=settings.rc_file,
                         help='specify the catalogue of git repositories'
     )
-    parser.add_argument('-d', '--dry-run', type=str, default=settings.dry_run,
+    parser.add_argument('-d', '--dry-run', action='store_true', default=settings.dry_run,
                         help='Do everything except change the repository'
     )
     parser.add_argument('-p', '--prefix', type=str, default=settings.prefix,
                         help='Prefix directory name containing all repositories'
     )
-    parser.add_argument('-q', '--quiet', type=str, default=settings.quiet,
+    parser.add_argument('-q', '--quiet', action='store_true', default=settings.quiet,
                         help='Print messages only if repository changes'
     )
     parser.add_argument('-s', '--set-as-default', action='store_true', default=False,
