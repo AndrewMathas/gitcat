@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 r'''
 git-cat
 =======
@@ -54,7 +53,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 '''
 
-# ---------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # TODO:
 #  - README file/documentation
 #  - debugging and testing...
@@ -81,8 +80,9 @@ import signal
 import subprocess
 import sys
 
-# ---------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # error messages and debugging
+
 
 def error_message(err):
     r'''
@@ -97,17 +97,19 @@ def debugging(message):
     if settings.DEBUGGING:
         print(message)
 
-# ---------------------------------------------------------------------------------------
-# exit gracefully on SIGINT and SIGTERM
-def graceful_exit(signal, frame):
-    print('program terminated (signal {})'.format(signal))
+
+# ---------------------------------------------------------------------------
+def graceful_exit(sig, frame):
+    ''' exit gracefully on SIGINT and SIGTERM '''
+    print('program terminated (signal {})'.format(sig))
     debugging('{}'.format(frame))
     sys.exit()
+
 
 signal.signal(signal.SIGINT, graceful_exit)
 signal.signal(signal.SIGTERM, graceful_exit)
 
-# ---------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # compiled regular expressions
 
 # section in an ini file
@@ -119,19 +121,20 @@ ahead_behind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
 # list of files that have changed
 files_changed = re.compile(r'([0-9]+ file(?:s|))(?: changed)')
 
-# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 # settings
 class Settings(dict):
     r"""
-    A class for reading and saving the fgitcar settings and supported git
-    command line options. 
+    A class for reading and saving the gitcat settings and supported git
+    command line options.
     """
     DEBUGGING = False
 
     def __init__(self, ini_file, git_options_file):
         super().__init__()
 
-        self.git_defaults = {} # will hold non-standard git defaults
+        self.git_defaults = {}  # will hold non-standard git defaults
         self.prefix = os.environ['HOME']
         self.quiet = False
         self.dry_run = False
@@ -151,7 +154,8 @@ class Settings(dict):
         Generate all of the git-cat command options as parsers of `subparser`
         '''
         for cmd in self.commands:
-            command = subparser.add_parser(cmd, help=self.commands[cmd]['help'])
+            command = subparser.add_parser(
+                cmd, help=self.commands[cmd]['help'])
             for option in self.commands[cmd]:
                 if option != 'help':
                     if 'short-option' in self.commands[cmd][option]:
@@ -160,11 +164,13 @@ class Settings(dict):
                         del options['short-option']
                         debugging('short option = {}.'.format(short_option))
                         if short_option is None:
-                            command.add_argument('--'+option, **options)
+                            command.add_argument('--' + option, **options)
                         else:
-                            command.add_argument('-'+short_option, '--'+option, **options)
+                            command.add_argument('-' + short_option,
+                                                 '--' + option, **options)
                     else:
-                        command.add_argument('-'+option[:1], '--'+option, **self.commands[cmd][option])
+                        command.add_argument('-' + option[:1], '--' + option,
+                                             **self.commands[cmd][option])
 
             # finally, add the optional repository filter option
             command.add_argument(
@@ -172,8 +178,7 @@ class Settings(dict):
                 type=str,
                 default='',
                 nargs='?',
-                help='optionally filter repositories for status'
-            )
+                help='optionally filter repositories for status')
 
     def read_init_file(self, ini_file):
         '''
@@ -183,13 +188,13 @@ class Settings(dict):
             for line in ini:
                 key, val = [w.strip() for w in line.split('=')]
                 if key != '':
-                    if '.' in key: 
-                        command, option = ket.split('.')
+                    if '.' in key:
+                        command, option = key.split('.')
                         if not command in self.git_defaults:
                             self.git_defaults[command] = {}
                         self.git_defaults[command][option] = val
                     else:
-                        setattr(self, '_'+key.lower(), val)
+                        setattr(self, '_' + key.lower(), val)
 
     def read_git_options(self, options_file):
         '''
@@ -198,7 +203,7 @@ class Settings(dict):
         self.commands = {}
         with open(options_file, 'r') as options:
             for line in options:
-                match =  ini_section.search(line.strip())
+                match = ini_section.search(line.strip())
                 if match:
                     # line is an ini section of the form: [command]
                     # set command and initialise to an empty dictionary
@@ -220,15 +225,16 @@ class Settings(dict):
 
                         try:
                             option['default'] = eval(default)
-                        except (NameError, SyntaxError, TypeError) as err:
+                        except (NameError, SyntaxError, TypeError):
                             option['default'] = default.strip()
                         if isinstance(option['default'], bool):
-                            option['action'] = 'store_{}'.format(str(not option['default']).lower())
+                            option['action'] = 'store_{}'.format(
+                                str(not option['default']).lower())
                         if isinstance(option['default'], str):
                             option['type'] = str
 
                         # dest could be overwritten later in the ini file
-                        option['dest'] = 'git_'+opt.replace('-', '_')
+                        option['dest'] = 'git_' + opt.replace('-', '_')
                         self.commands[command][opt] = option
                     elif len(choices) == 2:
                         # help for command or extra specifications for the current option
@@ -236,28 +242,35 @@ class Settings(dict):
                             self.commands[command]['help'] = choices[1]
                         else:
                             try:
-                                self.commands[command][opt][choices[0]] = eval(choices[1])
+                                self.commands[command][opt][choices[0]] = eval(
+                                    choices[1])
                             except (NameError, SyntaxError, TypeError) as err:
-                                self.commands[command][opt][choices[0]] = choices[1]
+                                self.commands[command][opt][
+                                    choices[0]] = choices[1]
                     else:
-                        error_message('syntax error in {} on the line\n {}'.format(options_file, line))
+                        error_message(
+                            'syntax error in {} on the line\n {}'.format(
+                                options_file, line))
 
     def save_settings(self):
         r'''
         Return a string for setting the non-standard settings in the gitcatrc file
         '''
-        settings = ''
+        save_settings = ''
         if self.prefix != os.environ['HOME']:
-            settings += 'prefix = {}\n'.format(self.prefix)
-        return settings
+            save_settings += 'prefix = {}\n'.format(self.prefix)
+        return save_settings
 
     def version(self):
         """ return gitcat version """
         return 'git cat version {}'.format(self._version)
-file = lambda f: os.path.join(os.path.dirname(__file__),  f)
+
+
+file = lambda f: os.path.join(os.path.dirname(__file__), f)
 settings = Settings(file('gitcat.ini'), file('git-options.ini'))
 
-# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 # running git commands using subprocess
 class Git:
     """
@@ -276,13 +289,13 @@ class Git:
      - returncode the return code from the subprocess command
      - output     the stdout and stderr output from the subprocess command
     """
+
     def __init__(self, rep, command, options=''):
         """ run a git command and wrap the return values for later use """
         git = subprocess.run(
             'git {} {}'.format(command, options).strip(),
             shell=True,
-            capture_output=True
-        )
+            capture_output=True)
 
         # store the output
         self.rep = rep
@@ -290,24 +303,25 @@ class Git:
         self.command = command + ' ' + options
 
         if self.returncode != 0:
-            debugging('-'*40)
+            debugging('-' * 40)
             print('{}: there was an error using git {}\n  {}\n'.format(
                 rep,
                 command,
-                git.stderr.decode().strip().replace('\n', '\n  ').replace('\r', '\n  '),
+                git.stderr.decode().strip().replace('\n', '\n  ').replace(
+                    '\r', '\n  '),
             ))
-            debugging('-'*40)
+            debugging('-' * 40)
             self.git_command_ok = False
         else:
             self.git_command_ok = True
 
         # output is indented two spaces and has no blank lines
-        self.output = '\n'.join('  '+lin.strip()
-             for lin in (git.stdout.decode().replace('\r', '\n').strip().split('\n')
-                        +git.stderr.decode().replace('\r', '\n').strip().split('\n'))
-                            if lin != ''
-        )
-        debugging('{}\nstdout={}\nstderr={}'.format(self, git.stdout, git.stderr))
+        self.output = '\n'.join('  ' + lin.strip() for lin in (
+            git.stdout.decode().replace('\r', '\n').strip().split('\n') +
+            git.stderr.decode().replace('\r', '\n').strip().split('\n'))
+                                if lin != '')
+        debugging('{}\nstdout={}\nstderr={}'.format(self, git.stdout,
+                                                    git.stderr))
 
     def __bool__(self):
         ''' return 'self.is_ok` '''
@@ -323,7 +337,8 @@ class Git:
             self.output.replace('\n', '\n  '),
         )
 
-# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 class GitCat:
     r"""
     Usage: GitCat(options)
@@ -371,15 +386,14 @@ class GitCat:
         The commit message is a list of the files being changed. Return
         the Git() record of the commit.
         '''
-        debugging('\nCOMMIT rep='+rep)
+        debugging('\nCOMMIT rep=' + rep)
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.output != '':
-            commit_message = 'git cat: updating '+changed_files.output
+            commit_message = 'git cat: updating ' + changed_files.output
             commit = '--all --message="{}"'.format(commit_message)
             if self.dry_run:
                 commit += ' --porcelain'
             return Git(rep, 'commit', commit)
-
 
         return changed_files
 
@@ -388,7 +402,8 @@ class GitCat:
         Return the path to the directory `dire`, adding `self.prefix` if
         necessary.
         '''
-        return dire if dire.startswith('/') else os.path.join(self.prefix, dire)
+        return dire if dire.startswith('/') else os.path.join(
+            self.prefix, dire)
 
     def is_git_repository(self, dire):
         r'''
@@ -399,7 +414,7 @@ class GitCat:
         debugging('\nCHECKING for git dire={}'.format(dire))
         if os.path.isdir(dire):
             os.chdir(dire)
-            rep = dire.replace(self.prefix+'/', '')
+            rep = dire.replace(self.prefix + '/', '')
             is_git = Git(rep, 'rev-parse', '--is-inside-work-tree')
             return is_git.returncode == 0 and 'true' in is_git.output
 
@@ -414,10 +429,9 @@ class GitCat:
         return '\n'.join('{dire:<{max}} {sep} {rep}'.format(
             dire=dire,
             rep=self.catalogue[dire],
-            sep='=' if listing or self.is_git_repository(self.expand_path(dire)) else '!',
-            max=self.max
-            ) for dire in self.repositories()
-        )
+            sep='=' if listing or self.
+            is_git_repository(self.expand_path(dire)) else '!',
+            max=self.max) for dire in self.repositories())
 
     def process_options(self, default_options=''):
         r'''
@@ -431,7 +445,7 @@ class GitCat:
                 opt = option[4:].replace('_', '-')
                 val = getattr(self.options, option)
                 if val is True:
-                    options += ' --'+opt
+                    options += ' --' + opt
                 elif isinstance(val, list):
                     options += ' --{}={}'.format(opt, ','.join(val))
                 elif isinstance(val, str):
@@ -460,13 +474,17 @@ class GitCat:
                         dire, rep = line.split(' = ')
                         dire = dire.strip()
                         if dire in self.catalogue:
-                            error_message('{} appears in the catalogue more than once!'.format(dire))
+                            error_message(
+                                '{} appears in the catalogue more than once!'.
+                                format(dire))
                         elif dire.lower == 'prefix':
                             self.prefix = rep.strip()
                         else:
                             self.catalogue[dire] = rep.strip()
-        except (FileNotFoundError, IOError):
-            error_message('there was a problem reading the catalogue file {}'.format(self.gitcatrc))
+        except (FileNotFoundError, OSError):
+            error_message(
+                'there was a problem reading the catalogue file {}'.format(
+                    self.gitcatrc))
 
         # set the maximum length of a catalogue key
         try:
@@ -479,9 +497,10 @@ class GitCat:
         Save the catalogue of git repositories to sync
         '''
         with open(self.gitcatrc, 'w') as catalogue:
-            catalogue.write('# List of git repositories to sync using gitcat\n\n')
+            catalogue.write(
+                '# List of git repositories to sync using gitcat\n\n')
             catalogue.write(settings.save_settings())
-            catalogue.write(self.list_catalogue(listing=True)+'\n')
+            catalogue.write(self.list_catalogue(listing=True) + '\n')
 
     def short_path(self, dire):
         r'''
@@ -489,8 +508,11 @@ class GitCat:
         if necessary.
         '''
         debugging('prefix = {}.'.format(self.prefix))
-        debugging('dire = {}, prefixed={}'.format(dire, dire.startswith(self.prefix)))
-        return dire[len(self.prefix)+1:] if dire.startswith(self.prefix) else dire
+        debugging('dire = {}, prefixed={}'.format(dire,
+                                                  dire.startswith(
+                                                      self.prefix)))
+        return dire[len(self.prefix) + 1:] if dire.startswith(
+            self.prefix) else dire
 
     def repositories(self):
         ''' return the list of repositories to iterate over by
@@ -503,9 +525,9 @@ class GitCat:
         repositories = re.compile(self.options.repositories)
         return filter(repositories.search, self.catalogue.keys())
 
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # messages
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
     def message(self, message, ending=None):
         r'''
@@ -513,9 +535,9 @@ class GitCat:
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
         if not self.quiet:
-            debugging('-'*40)
+            debugging('-' * 40)
             print(message, end=ending)
-            debugging('-'*40)
+            debugging('-' * 40)
 
     def quiet_message(self, message, ending=None):
         r'''
@@ -523,26 +545,25 @@ class GitCat:
         as the, well, ending. If `self.quiet` is `True` then do nothing.
         '''
         if self.quiet:
-            debugging('-'*40)
+            debugging('-' * 40)
             print(message, end=ending)
-            debugging('-'*40)
+            debugging('-' * 40)
 
     def rep_message(self, rep, message='', quiet=True, ending=None):
         r'''
         If `self.quiet` is `True` then print `message` to stdout, with `ending`
         as the, well, ending. If `self.quiet` is `False` then do nothing.
         '''
-        debugging('rep message: quiet={}, self.quiet={} and quietness={}\n{}'.format(
-                  quiet, self.quiet, not(quiet and self.quiet), '-'*40
-                 )
-        )
-        if not(quiet and self.quiet):
-            print('{:<{max}} {}'.format(rep, message, max=self.max, end=ending))
-            debugging('-'*40)
+        debugging(
+            'rep message: quiet={}, self.quiet={} and quietness={}\n{}'.format(
+                quiet, self.quiet, not (quiet and self.quiet), '-' * 40))
+        if not (quiet and self.quiet):
+            print('{:<{max}} {}'.format(rep, message, max=self.max), end=ending)
+            debugging('-' * 40)
 
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # Now implement the git cat commands available from the command line
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
     def add(self):
         r'''
@@ -561,20 +582,21 @@ class GitCat:
         root = Git(dire, 'root')
         if not root:
             error_message('{} is not a git repository:\n  {}'.format(
-                dire, root.output)
-            )
+                dire, root.output))
 
         rep = Git(dire, 'remote', 'get-url --push origin')
         if not rep:
-            error_message('Unable to find remote repository for {} :\n  {}'.format(
-                dire, rep.output)
-            )
+            error_message(
+                'Unable to find remote repository for {} :\n  {}'.format(
+                    dire, rep.output))
 
         dire = self.short_path(root.output.strip())
         rep = rep.output.strip()
         if dire in self.catalogue:
             # give an error if repository is already in the catalogue
-            error_message('the git repository in {} is already in the catalogue'.format(dire))
+            error_message(
+                'the git repository in {} is already in the catalogue'.format(
+                    dire))
         else:
             # add current directory to the repository and save
             self.catalogue[dire] = rep
@@ -585,7 +607,9 @@ class GitCat:
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(dire, 'commit', '--all --message="{}"'.format('Adding {} to gitcatrc'.format(dire)))
+                Git(
+                    dire, 'commit', '--all --message="{}"'.format(
+                        'Adding {} to gitcatrc'.format(dire)))
 
     def branch(self):
         r'''
@@ -596,7 +620,7 @@ class GitCat:
         # have to work harder to extract information about the pull
         options = self.process_options('--verbose')
         for rep in self.repositories():
-            debugging('\nBRANCH '+rep)
+            debugging('\nBRANCH ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 pull = Git(rep, 'branch', options)
@@ -604,7 +628,8 @@ class GitCat:
                     if '\n' not in pull.output:
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, pull.output[pull.output.index('\n'):])
+                        self.rep_message(rep,
+                                         pull.output[pull.output.index('\n'):])
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -622,7 +647,7 @@ class GitCat:
         well.
         '''
         for rep in self.repositories():
-            debugging('\nCOMMITTING '+rep)
+            debugging('\nCOMMITTING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 self.commit_repository(rep)
@@ -635,7 +660,7 @@ class GitCat:
         options = self.process_options()
         options += ' HEAD'
         for rep in self.repositories():
-            debugging('\nDIFFING '+rep)
+            debugging('\nDIFFING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 diff = Git(rep, 'diff' 'options')
@@ -654,7 +679,7 @@ class GitCat:
         # have to work harder to extract information about the pull
         options = self.process_options('-q --progress')
         for rep in self.repositories():
-            debugging('\nFETCHING '+rep)
+            debugging('\nFETCHING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 pull = Git(rep, 'fetch', options)
@@ -670,7 +695,7 @@ class GitCat:
         r''' Run git commands on every repository in the catalogue '''
         git_command = '{}'.format(' '.join(cmd for cmd in commands))
         for rep in self.repositories():
-            debugging('\nGITTING '+rep)
+            debugging('\nGITTING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 print('Repository = {}, command = {}'.format(rep, git_command))
@@ -681,7 +706,7 @@ class GitCat:
         Install some or all of the repositories in the catalogue
         '''
         for rep in self.repositories():
-            debugging('\nINSTALLING '+rep)
+            debugging('\nINSTALLING ' + rep)
             dire = self.expand_path(rep)
             if not os.path.exists(dire):
                 self.rep_message(rep, 'installing')
@@ -689,10 +714,10 @@ class GitCat:
                 os.makedirs(parent, exist_ok=True)
                 os.chdir(parent)
                 if not self.dry_run:
-                    install = Git(rep, 'clone', '--quiet {rep} {dire}'.format(
-                        dire=os.path.basename(dire),
-                        rep=self.catalogue[rep])
-                    )
+                    install = Git(
+                        rep, 'clone', '--quiet {rep} {dire}'.format(
+                            dire=os.path.basename(dire),
+                            rep=self.catalogue[rep]))
                     if install:
                         self.message(' - done!')
             if not (self.dry_run or self.is_git_repository(dire)):
@@ -707,7 +732,7 @@ class GitCat:
         # have to work harder to extract information about the pull
         options = self.process_options('-q --progress')
         for rep in self.repositories():
-            debugging('\nPULLING '+rep)
+            debugging('\nPULLING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 pull = Git(rep, 'pull', options)
@@ -715,10 +740,12 @@ class GitCat:
                     if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, 'pulling\n'
-                            +'\n'.join(lin for lin in pull.output.split('\n') if 'Compressing' not in lin),
-                            quiet=False
-                        )
+                        self.rep_message(
+                            rep,
+                            'pulling\n' + '\n'.join(
+                                lin for lin in pull.output.split('\n')
+                                if 'Compressing' not in lin),
+                            quiet=False)
             else:
                 self.rep_message(rep, 'repository not installed')
 
@@ -729,15 +756,15 @@ class GitCat:
         '''
         options = self.process_options('--porcelain --follow-tags')
         for rep in self.repositories():
-            debugging('\nPUSHING '+rep)
+            debugging('\nPUSHING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 debugging('Continuing with push')
                 commit = self.commit_repository(rep)
                 if commit:
                     if commit.output != '':
-                        self.rep_message(rep, 'commit\n'+commit.output)
-                    push = Git(rep, 'push', options+' --dry-run')
+                        self.rep_message(rep, 'commit\n' + commit.output)
+                    push = Git(rep, 'push', options + ' --dry-run')
                     if push:
                         if '[up to date]' in push.output:
                             self.rep_message(rep, 'up to date')
@@ -745,14 +772,19 @@ class GitCat:
                             push = Git(rep, 'push', options)
 
                             if push:
-                                if push.output.startswith('  To ') and push.output.endswith('Done'):
+                                if push.output.startswith(
+                                        '  To ') and push.output.endswith(
+                                            'Done'):
                                     if commit.output == '' and 'up to date' not in commit.output:
-                                        self.rep_message(rep, 'pushed\n'+push.output)
+                                        self.rep_message(
+                                            rep, 'pushed\n' + push.output)
                                     else:
-                                        self.message(push.output.split('\n')[0])
+                                        self.message(
+                                            push.output.split('\n')[0])
                                 else:
                                     if commit.output == '' and 'up to date' not in commit.output:
-                                        self.rep_message(rep, 'pushed\n'+push.output)
+                                        self.rep_message(
+                                            rep, 'pushed\n' + push.output)
                                     else:
                                         self.message(push.output)
 
@@ -784,7 +816,9 @@ class GitCat:
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(dire, 'commit', '--all --message "{}"'.format('Removing {} from gitcatrc'.format(dire)))
+                Git(
+                    dire, 'commit', '--all --message "{}"'.format(
+                        'Removing {} from gitcatrc'.format(dire)))
 
     def status(self):
         r'''
@@ -806,10 +840,12 @@ class GitCat:
                     status = Git(rep, 'status', status_options)
                     if status:
                         changes = ahead_behind.search(status.output)
-                        changes = '' if changes is None else changes.group()[1:-1]
+                        changes = '' if changes is None else changes.group(
+                        )[1:-1]
 
                         if '\n' in status.output:
-                            status.output = status.output[status.output.index('\n')+1:]
+                            status.output = status.output[status.output.
+                                                          index('\n') + 1:]
                         elif status.output.startswith('  ##'):
                             status.output = ''
 
@@ -818,15 +854,20 @@ class GitCat:
                         changed = ''
                         if diff:
                             changed = files_changed.search(diff.output)
-                            changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
+                            changed = '' if changed is None else 'uncommitted changes in ' + changed.groups(
+                            )[0]
 
-                        debugging('changes = {}\nchanged={}\nstatus={}'.format(changes, changed, status.output))
+                        debugging('changes = {}\nchanged={}\nstatus={}'.format(
+                            changes, changed, status.output))
 
                         if changes != '':
-                            changed += changes if changed == '' else ', '+changes
+                            changed += changes if changed == '' else ', ' + changes
 
                         if status.output != '':
-                            self.rep_message(rep, changed+'\n'+status.output, quiet=False)
+                            self.rep_message(
+                                rep,
+                                changed + '\n' + status.output,
+                                quiet=False)
                         elif changed != '':
                             self.rep_message(rep, changed, quiet=False)
                         else:
@@ -835,34 +876,40 @@ class GitCat:
             else:
                 self.rep_message(rep, 'not on system')
 
-# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+
 
 class CustomHelpFormatter(argparse.HelpFormatter):
-
+    ''' Override help to 
+    '''
     def _format_action(self, action):
-        if type(action) == argparse._SubParsersAction:
+        if isinstance(action, argparse._SubParsersAction):
             # inject new class variable for subcommand formatting
             subactions = action._get_subactions()
-            invocations = [self._format_action_invocation(a) for a in subactions]
+            invocations = [
+                self._format_action_invocation(a) for a in subactions
+            ]
             self._subcommand_max_length = max(len(i) for i in invocations)
 
-        if type(action) == argparse._SubParsersAction._ChoicesPseudoAction:
+        if isinstance(action, argparse._SubParsersAction._ChoicesPseudoAction):
             # format subcommand help line
-            subcommand = self._format_action_invocation(action) # type: str
+            subcommand = self._format_action_invocation(action)  # type: str
             width = self._subcommand_max_length
             help_text = ""
             if action.help:
                 help_text = self._expand_help(action)
-            return "  {:{width}} -  {}\n".format(subcommand, help_text, width=width)
+            return "  {:{width}} -  {}\n".format(
+                subcommand, help_text, width=width)
 
-        elif type(action) == argparse._SubParsersAction:
+        elif isinstance(action, argparse._SubParsersAction):
             # process subcommand help section
             message = '\n'
             for subaction in action._get_subactions():
                 message += self._format_action(subaction)
             return message
-        else:
-            return super(CustomHelpFormatter, self)._format_action(action)
+
+        return super(CustomHelpFormatter, self)._format_action(action)
 
     def _metavar_formatter(self, action, default_metavar):
         if action.metavar is not None:
@@ -872,18 +919,21 @@ class CustomHelpFormatter(argparse.HelpFormatter):
         else:
             result = default_metavar
 
-        def format(tuple_size):
+        def new_format(tuple_size):
             if isinstance(result, tuple):
                 return result
 
             return (result, ) * tuple_size
-        return format
+
+        return new_format
+
 
 class CollectArguments(argparse.Action):
     r'''
     Collect all unknown arguments. Anwer by Jiří J on
         https://stackoverflow.com/questions/33432648/
     '''
+
     def __init__(self, option_strings, dest, nargs=None, *args, **kwargs):
         nargs = argparse.REMAINDER
         super().__init__(option_strings, dest, nargs, *args, **kwargs)
@@ -909,7 +959,8 @@ class CollectArguments(argparse.Action):
         except AttributeError:
             setattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR, extras)
 
-# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 def main():
     # allow the command line options to change the DEBUGGING flag
     global settings
@@ -917,97 +968,124 @@ def main():
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
         #add_help=False,
-        description='Simultaneously push and pull to a catalogue of remote git repositories',
+        description=
+        'Simultaneously push and pull to a catalogue of remote git repositories',
         formatter_class=CustomHelpFormatter,
         prog='git cat',
     )
 
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # catalogue options
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
-    parser.add_argument('-c', '--catalogue', type=str, default=settings.rc_file,
-                        help='specify the catalogue of git repositories'
-    )
-    parser.add_argument('-d', '--dry-run', action='store_true', default=settings.dry_run,
-                        help='Do everything except change the repository'
-    )
-    parser.add_argument('-p', '--prefix', type=str, default=settings.prefix,
-                        help='Prefix directory name containing all repositories'
-    )
-    parser.add_argument('-q', '--quiet', action='store_true', default=settings.quiet,
-                        help='Print messages only if repository changes'
-    )
-    parser.add_argument('-s', '--set-as-default', action='store_true', default=False,
-                        help='use the current options for <command> as the default'
-    )
+    parser.add_argument(
+        '-c',
+        '--catalogue',
+        type=str,
+        default=settings.rc_file,
+        help='specify the catalogue of git repositories')
+    parser.add_argument(
+        '-d',
+        '--dry-run',
+        action='store_true',
+        default=settings.dry_run,
+        help='Do everything except change the repository')
+    parser.add_argument(
+        '-p',
+        '--prefix',
+        type=str,
+        default=settings.prefix,
+        help='Prefix directory name containing all repositories')
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        action='store_true',
+        default=settings.quiet,
+        help='Print messages only if repository changes')
+    parser.add_argument(
+        '-s',
+        '--set-as-default',
+        action='store_true',
+        default=False,
+        help='use the current options for <command> as the default')
 
     # help suppressed options
-    parser.add_argument('--debugging',
-                        action='store_true',
-                        default=False,
-                        help=argparse.SUPPRESS
-    )
-    parser.add_argument('-v', '--version',
-                        action='version',
-                        version=settings.version(),
-                        help=argparse.SUPPRESS
-    )
+    parser.add_argument(
+        '--debugging',
+        action='store_true',
+        default=False,
+        help=argparse.SUPPRESS)
+    parser.add_argument(
+        '-v',
+        '--version',
+        action='version',
+        version=settings.version(),
+        help=argparse.SUPPRESS)
 
-    subparsers = parser.add_subparsers(help='Subcommand to run', dest='command')
+    subparsers = parser.add_subparsers(
+        help='Subcommand to run', dest='command')
 
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # catalogue commands
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     parser._positionals.title = 'Commands'
     parser._optionals.title = 'Optional arguments'
 
     add = subparsers.add_parser('add', help='Add repository to the catalogue')
-    add.add_argument('repository',
-                     type=str,
-                     nargs='?',
-                     default=os.getcwd(),
-                     help='Name of repository to add'
-    )
+    add.add_argument(
+        'repository',
+        type=str,
+        nargs='?',
+        default=os.getcwd(),
+        help='Name of repository to add')
 
-    install = subparsers.add_parser('install', help='Install all repositories in the catalogue')
-    install.add_argument('install_reps',
-                         type=str,
-                         nargs='?',
-                         help='Install only specified repository'
-    )
-    install.add_argument('-d', '--dry-run',
-                         action='store_true',
-                         default=False,
-                         help='Do everything except actually send the updates'
-    )
-    install.add_argument('-q', '--quiet',
-                         action='store_true',
-                         default=False,
-                         help='print messages'
-    )
+    install = subparsers.add_parser(
+        'install', help='Install all repositories in the catalogue')
+    install.add_argument(
+        'install_reps',
+        type=str,
+        nargs='?',
+        help='Install only specified repository')
+    install.add_argument(
+        '-d',
+        '--dry-run',
+        action='store_true',
+        default=False,
+        help='Do everything except actually send the updates')
+    install.add_argument(
+        '-q',
+        '--quiet',
+        action='store_true',
+        default=False,
+        help='print messages')
 
-    ls = subparsers.add_parser('ls', help='List all of the repositories in the catalogue')
-    ls.add_argument(dest='repositories', type=str, default='', nargs='?',
-                    help='optionally filter the repositories to list'
-    )
+    ls = subparsers.add_parser(
+        'ls', help='List all of the repositories in the catalogue')
+    ls.add_argument(
+        dest='repositories',
+        type=str,
+        default='',
+        nargs='?',
+        help='optionally filter the repositories to list')
 
-    remove = subparsers.add_parser('remove', help='Remove repository from the catalogue')
-    remove.add_argument('-d', '--delete',
-                        action='store_true',
-                        default=False,
-                        help='Delete directory as well'
-    )
-    remove.add_argument('repository',
-                        type=str,
-                        nargs='?',
-                        default=None,
-                        help='Name of repository to remove'
-    )
+    remove = subparsers.add_parser(
+        'remove', help='Remove repository from the catalogue')
+    remove.add_argument(
+        '-d',
+        '--delete',
+        action='store_true',
+        default=False,
+        help='Delete directory as well')
+    remove.add_argument(
+        'repository',
+        type=str,
+        nargs='?',
+        default=None,
+        help='Name of repository to remove')
 
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # add git commands using settings and the git-options.ini file
-    # ---------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     settings.add_git_options(subparsers)
 
     options = parser.parse_args()
@@ -1018,6 +1096,7 @@ def main():
 
     GitCat(options)
 
-# ---------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 if __name__ == '__main__':
     main()
