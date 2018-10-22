@@ -304,9 +304,9 @@ class Git:
 
         if self.returncode != 0:
             debugging('-' * 40)
-            print('{}: there was an error using git {}\n  {}\n'.format(
+            print('{}: there was an error using git {} {}\n  {}\n'.format(
                 rep,
-                command,
+                command, options,
                 git.stderr.decode().strip().replace('\n', '\n  ').replace(
                     '\r', '\n  '),
             ))
