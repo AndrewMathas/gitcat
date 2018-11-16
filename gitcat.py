@@ -79,6 +79,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import uuid
 
 # ---------------------------------------------------------------------------
 # error messages and debugging
@@ -155,7 +156,9 @@ class Settings(dict):
         '''
         for cmd in self.commands:
             command = subparser.add_parser(
-                cmd, help=self.commands[cmd]['help'])
+                cmd, help=self.commands[cmd]['help'],
+                epilog = getattr(GitCat, cmd).__doc__
+            )
             for option in self.commands[cmd]:
                 if option != 'help':
                     if 'short-option' in self.commands[cmd][option]:
@@ -703,12 +706,25 @@ class GitCat:
 
     def install(self):
         r'''
-        Install some or all of the repositories in the catalogue
+        Install listed repositories from the catalogue.
+
+        If a directory exists but is not a git repository then initialise the
+        repository and add from the remote.
         '''
         for rep in self.repositories():
             debugging('\nINSTALLING ' + rep)
             dire = self.expand_path(rep)
-            if not os.path.exists(dire):
+            if os.path.exists(dire):
+                if os.path.exists(os.path.join(dire, '.git')):
+                    self.rep_message('git repository {} already exists'.format(dire))
+                else:
+                    # initialise current repository and fetch from remote
+                    Git(rep, 'init')
+                    Git(rep, 'remote add origin {}'.format(self.catalogue[rep]))
+                    Git(rep, 'fetch origin')
+                    Git(rep, 'checkout -b master --track origin/master')
+
+            else:
                 self.rep_message(rep, 'installing')
                 parent = os.path.dirname(dire)
                 os.makedirs(parent, exist_ok=True)
@@ -716,12 +732,14 @@ class GitCat:
                 if not self.dry_run:
                     install = Git(
                         rep, 'clone', '--quiet {rep} {dire}'.format(
-                            dire=os.path.basename(dire),
-                            rep=self.catalogue[rep]))
+                            rep=self.catalogue[rep],
+                            dire=os.path.basename(dire)
+                        )
+                    )
                     if install:
                         self.message(' - done!')
             if not (self.dry_run or self.is_git_repository(dire)):
-                print('{} is not a git repository!?'.format(rep))
+                self.rep_message(rep, 'not a git repository!?'.format(rep), quiet=False)
 
     def pull(self):
         r'''
@@ -1031,7 +1049,9 @@ def main():
     parser._positionals.title = 'Commands'
     parser._optionals.title = 'Optional arguments'
 
-    add = subparsers.add_parser('add', help='Add repository to the catalogue')
+    add = subparsers.add_parser('add', help='Add repository to the catalogue',
+        epilog = GitCat.add.__doc__
+    )
     add.add_argument(
         'repository',
         type=str,
@@ -1040,9 +1060,11 @@ def main():
         help='Name of repository to add')
 
     install = subparsers.add_parser(
-        'install', help='Install all repositories in the catalogue')
+        'install', help='Install all repositories in the catalogue',
+        epilog = GitCat.install.__doc__
+        )
     install.add_argument(
-        'install_reps',
+        'repositories',
         type=str,
         nargs='?',
         help='Install only specified repository')
@@ -1060,7 +1082,10 @@ def main():
         help='print messages')
 
     ls = subparsers.add_parser(
-        'ls', help='List all of the repositories in the catalogue')
+        'ls', 
+        help='List all of the repositories in the catalogue',
+        epilog = GitCat.ls.__doc__
+        )
     ls.add_argument(
         dest='repositories',
         type=str,
@@ -1069,7 +1094,9 @@ def main():
         help='optionally filter the repositories to list')
 
     remove = subparsers.add_parser(
-        'remove', help='Remove repository from the catalogue')
+        'remove', help='Remove repository from the catalogue',
+        epilog = GitCat.remove.__doc__
+        )
     remove.add_argument(
         '-d',
         '--delete',
