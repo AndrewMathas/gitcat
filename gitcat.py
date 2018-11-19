@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 r'''
 git-cat
 =======
@@ -156,9 +156,9 @@ class Settings(dict):
         '''
         for cmd in self.commands:
             command = subparser.add_parser(
-                cmd, help=self.commands[cmd]['help'],
-                epilog = getattr(GitCat, cmd).__doc__
-            )
+                cmd,
+                help=self.commands[cmd]['help'],
+                epilog=getattr(GitCat, cmd).__doc__)
             for option in self.commands[cmd]:
                 if option != 'help':
                     if 'short-option' in self.commands[cmd][option]:
@@ -309,7 +309,8 @@ class Git:
             debugging('-' * 40)
             print('{}: there was an error using git {} {}\n  {}\n'.format(
                 rep,
-                command, options,
+                command,
+                options,
                 git.stderr.decode().strip().replace('\n', '\n  ').replace(
                     '\r', '\n  '),
             ))
@@ -561,7 +562,8 @@ class GitCat:
             'rep message: quiet={}, self.quiet={} and quietness={}\n{}'.format(
                 quiet, self.quiet, not (quiet and self.quiet), '-' * 40))
         if not (quiet and self.quiet):
-            print('{:<{max}} {}'.format(rep, message, max=self.max), end=ending)
+            print('{:<{max}} {}'.format(rep, message, max=self.max), 
+                  end=ending)
             debugging('-' * 40)
 
     # ---------------------------------------------------------------------------
@@ -716,11 +718,13 @@ class GitCat:
             dire = self.expand_path(rep)
             if os.path.exists(dire):
                 if os.path.exists(os.path.join(dire, '.git')):
-                    self.rep_message('git repository {} already exists'.format(dire))
+                    self.rep_message(
+                        'git repository {} already exists'.format(dire))
                 else:
                     # initialise current repository and fetch from remote
                     Git(rep, 'init')
-                    Git(rep, 'remote add origin {}'.format(self.catalogue[rep]))
+                    Git(rep,
+                        'remote add origin {}'.format(self.catalogue[rep]))
                     Git(rep, 'fetch origin')
                     Git(rep, 'checkout -b master --track origin/master')
 
@@ -733,13 +737,12 @@ class GitCat:
                     install = Git(
                         rep, 'clone', '--quiet {rep} {dire}'.format(
                             rep=self.catalogue[rep],
-                            dire=os.path.basename(dire)
-                        )
-                    )
+                            dire=os.path.basename(dire)))
                     if install:
                         self.message(' - done!')
             if not (self.dry_run or self.is_git_repository(dire)):
-                self.rep_message(rep, 'not a git repository!?'.format(rep), quiet=False)
+                self.rep_message(
+                    rep, 'not a git repository!?'.format(rep), quiet=False)
 
     def pull(self):
         r'''
@@ -901,6 +904,7 @@ class GitCat:
 class CustomHelpFormatter(argparse.HelpFormatter):
     ''' Override help to 
     '''
+
     def _format_action(self, action):
         if isinstance(action, argparse._SubParsersAction):
             # inject new class variable for subcommand formatting
@@ -1049,9 +1053,10 @@ def main():
     parser._positionals.title = 'Commands'
     parser._optionals.title = 'Optional arguments'
 
-    add = subparsers.add_parser('add', help='Add repository to the catalogue',
-        epilog = GitCat.add.__doc__
-    )
+    add = subparsers.add_parser(
+        'add',
+        help='Add repository to the catalogue',
+        epilog=GitCat.add.__doc__)
     add.add_argument(
         'repository',
         type=str,
@@ -1060,9 +1065,9 @@ def main():
         help='Name of repository to add')
 
     install = subparsers.add_parser(
-        'install', help='Install all repositories in the catalogue',
-        epilog = GitCat.install.__doc__
-        )
+        'install',
+        help='Install all repositories in the catalogue',
+        epilog=GitCat.install.__doc__)
     install.add_argument(
         'repositories',
         type=str,
@@ -1082,10 +1087,9 @@ def main():
         help='print messages')
 
     ls = subparsers.add_parser(
-        'ls', 
+        'ls',
         help='List all of the repositories in the catalogue',
-        epilog = GitCat.ls.__doc__
-        )
+        epilog=GitCat.ls.__doc__)
     ls.add_argument(
         dest='repositories',
         type=str,
@@ -1094,9 +1098,9 @@ def main():
         help='optionally filter the repositories to list')
 
     remove = subparsers.add_parser(
-        'remove', help='Remove repository from the catalogue',
-        epilog = GitCat.remove.__doc__
-        )
+        'remove',
+        help='Remove repository from the catalogue',
+        epilog=GitCat.remove.__doc__)
     remove.add_argument(
         '-d',
         '--delete',
