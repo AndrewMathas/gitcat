@@ -13,8 +13,9 @@ r'''
 -----------------------------------------------------------------------------------------
 '''
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Command
 import gitcat
+import os
 import subprocess
 
 class Settings(dict):
@@ -30,7 +31,64 @@ class Settings(dict):
 
 settings = Settings('gitcat.ini')
 
-subprocess.run('/bin/rm git-cat.1 && rst2man.py README.rst > git-cat.1', shell=True)
+class BuildDoc(Command):
+    r'''
+    Build the README and documentation for git-cat
+    '''
+    description = 'Build the README and manual files'
+    user_options = []
+
+    def initialize_options(self):
+         """init options"""
+         pass
+
+    def finalize_options(self):
+         """finalize options"""
+         pass
+
+    def run(self):
+        '''
+        This is where all of the work is done
+        '''
+        self.clean_doc_files()
+        self.build_readme()
+        self.build_manual()
+
+    def clean_doc_files(self):
+        '''
+        remove all generated doc files
+        '''
+        for doc in ['README.rst', 'README.html', 'git-cat.1']:
+            try:
+                os.remove(doc)
+            except FileNotFoundError:
+                pass
+
+    def build_readme(self):
+        '''
+        Construct the README.rst file from the files in the doc directory and
+        using gitcat.py --generate_help.
+        '''
+        from gitcat import setup_command_line_parser, __doc__
+        doc = __doc__.split('Author')
+        parser, commands = setup_command_line_parser()
+        with open('README.rst','w', newline='\n') as readme:
+            readme.write(doc[0])
+            readme.write(parser.format_help()+'\n')
+            for cmd in commands.choices:
+                readme.write('**{}**\n\n'.format(cmd))
+                print('format help:\n{}'.format(commands.choices[cmd].format_help()))
+                readme.writelines(commands.choices[cmd].format_help()+'\n')
+            with open('doc/README-end', 'r') as stop:
+                for line in stop:
+                    readme.write(line)
+
+    def build_manual(self):
+        '''
+        Build the git-cat manual from the README file
+        '''
+        subprocess.run('rst2html5.py README.rst > README.html', shell=True)
+        subprocess.run('rst2man.py README.rst > git-cat.1', shell=True)
 
 setup(name             = settings.program,
       version          = settings.version,
@@ -42,9 +100,9 @@ setup(name             = settings.program,
 
       keywords         = 'git, catalogue, repositories',
 
+      cmdclass         = {'doc'   : BuildDoc},
+
       packages=find_packages(),
-      data_files = [('man/man1', ['git-cat.1'])],
-      include_package_data=True,
       python_requires='>=3.7',
 
       entry_points     = {'console_scripts': ['git-cat = gitcat:main', ],},
