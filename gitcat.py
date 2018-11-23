@@ -51,7 +51,7 @@ import shutil
 import signal
 import subprocess
 import sys
-import uuid
+import textwrap
 
 # ---------------------------------------------------------------------------
 # error messages and debugging
@@ -122,6 +122,14 @@ class Settings(dict):
         self.read_init_file(ini_file)
         self.read_git_options(git_options_file)
 
+    @staticmethod
+    def doc_string(cmd):
+        '''
+        Return a sanitised version of the doc-string for the method `cdm` of
+        `GitCat`. In particular, all code-blocks are removed.
+        '''
+        return textwrap.dedent(getattr(GitCat, cmd).__doc__)
+
     def add_git_options(self, command_parser):
         '''
         Generate all of the git-cat command options as parsers of `command_parser`
@@ -131,7 +139,8 @@ class Settings(dict):
                 cmd,
                 help=self.commands[cmd]['description'],
                 description=self.commands[cmd]['description'],
-                epilog=getattr(GitCat, cmd).__doc__
+                formatter_class=argparse.RawTextHelpFormatter,
+                epilog=self.doc_string(cmd)
             )
             for option in self.commands[cmd]:
                 if option != 'description':
@@ -604,9 +613,9 @@ class GitCat:
         Run `git branch --verbose` in selected repositories in the
         catagalogue.
 
-        EXAMPLE
+        Example:
 
-        .. code-block:: bash
+        .. code-block::
 
             > git cat branch Code
             Code/Autoweb
@@ -913,6 +922,7 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
     '''
 
     def _format_action(self, action):
+        print('formatting {}'.format(action))
         if isinstance(action, argparse._SubParsersAction):
             # inject new class variable for subcommand formatting
             subactions = action._get_subactions()
@@ -928,12 +938,12 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
             help_text = ""
             if action.help:
                 help_text = self._expand_help(action)
-            return "  {:{width}} - {}\n".format(
+            return "  {:{width}}   {}\n".format(
                 subcommand, help_text, width=width)
 
         elif isinstance(action, argparse._SubParsersAction):
             # process subcommand help section
-            message = '\n'
+            message = ''
             for subaction in action._get_subactions():
                 message += self._format_action(subaction)
             return message
@@ -955,18 +965,6 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
             return (result, ) * tuple_size
 
         return new_format
-
-    def add_text(self, text):
-        if text is not SUPPRESS and text is not None:
-            self._add_item(self._format_text, [text])
-
-    def _fill_text(self, text, width, indent):
-        print(text+'.'*40)
-        return ''.join(indent + line for line in text.splitlines(keepends=True))
-
-    def _split_lines(self, text, width):
-        print('splitting: '+text+'.'*40)
-        return text.splitlines()
 
 
 # ---------------------------------------------------------------------------

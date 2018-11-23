@@ -12,24 +12,24 @@ Simultaneously synchronise multiple local and remote git repositories
 Optional arguments:
   -h, --help            show this help message and exit
   -c CATALOGUE, --catalogue CATALOGUE
-                        specify the catalogue of git repositories (default: /Users/andrew/.dotfiles/config/gitcatrc)
+                        specify the catalogue of git repositories (default:
+                        /Users/andrew/.dotfiles/config/gitcatrc)
   -p PREFIX, --prefix PREFIX
                         Prefix directory name containing all repositories
   -q, --quiet           Print messages only if repository changes
 
 Commands:
-
-  add     - Add current repository to the catalogue
-  branch  - Print status of all branches in repository
-  commit  - Commit changes in all repositories
-  diff    - Print a diff of the changes in each repository
-  fetch   - Fetch all repositories from remote repositories
-  install - Install repository from the catalogue
-  ls      - List all repositories in the catalogue
-  pull    - Pull all repositories from remote repositories
-  push    - Commit and push local repositories to remote repositories
-  remove  - Remove repository from the catalogue
-  status  - Print the status of all repositories
+  add       Add current repository to the catalogue
+  branch    Print status of all branches in repository
+  commit    Commit changes in all repositories
+  diff      Print a diff of the changes in each repository
+  fetch     Fetch all repositories from remote repositories
+  install   Install repository from the catalogue
+  ls        List all repositories in the catalogue
+  pull      Pull all repositories from remote repositories
+  push      Commit and push local repositories to remote repositories
+  remove    Remove repository from the catalogue
+  status    Print the status of all repositories
 
 **add**
 
@@ -43,9 +43,10 @@ optional arguments:
                         Add repository from specified directory
   -q, --quiet           only print "important" messages
 
-Add the current repository to the catalogue stored in gitcatrc. An error is
-returned if the current directory is not a git repository, if it is a git
-repositroy but has no remote or if the repository is already in the catalgoue.
+Add the current repository to the catalogue stored in gitcatrc. An
+error is returned if the current directory is not a git repository, if
+it is a git repositroy but has no remote or if the repository is
+already in the catalgoue.
 
 **branch**
 
@@ -60,15 +61,28 @@ optional arguments:
   -h, --help    show this help message and exit
   -q, --quiet   only print "important" messages
 
-Run `git branch --verbose` in selected repositories in the catagalogue.
-EXAMPLE .. code-block:: bash > git cat branch Code Code/Autoweb python3
-6c2fcd5 Converting to python 3 Code/Bibupdate master 2d2614e [ahead 1] Adding
-annouce and notes to ctan_specs Code/GitCat already up to date Code/GitLPDF
-already up to date Code/GradedSpecht Antons_deformation 14fc541 Adding braid
-method to tableau * cartan_type 68480a4 git cat: updating
-graded_specht/klr_algebras.py master 862e2f4 Adding braid method to tableau
-Code/PG already up to date Code/SmartUnits master cdb337a Minor bug fixes
-Code/WebQuiz already up to date
+Run `git branch --verbose` in selected repositories in the
+catagalogue.
+
+Example:
+
+.. code-block::
+
+    > git cat branch Code
+    Code/Autoweb
+      python3 6c2fcd5 Converting to python 3
+    Code/Bibupdate
+      master  2d2614e [ahead 1] Adding annouce and notes to ctan_specs
+    Code/GitCat        already up to date
+    Code/GitLPDF       already up to date
+    Code/GradedSpecht
+      Antons_deformation 14fc541 Adding braid method to tableau
+      * cartan_type        68480a4 git cat: updating   graded_specht/klr_algebras.py
+      master             862e2f4 Adding braid method to tableau
+    Code/PG            already up to date
+    Code/SmartUnits
+      master cdb337a Minor bug fixes
+    Code/WebQuiz       already up to date
 
 **commit**
 
@@ -87,9 +101,10 @@ optional arguments:
   -v, --verbose  Print a unified diff for the commit
   -q, --quiet    only print "important" messages
 
-Commit all of the repositories in the catalogue where files have changed. The
-work is actually done by `self.commit_repository`, which commits only one
-repository, since other methods need to call this as well.
+Commit all of the repositories in the catalogue where files have
+changed. The work is actually done by `self.commit_repository`, which
+commits only one repository, since other methods need to call this as
+well.
 
 **diff**
 
@@ -107,12 +122,12 @@ optional arguments:
   --name-only    Show only names of changed files
   --name-status  Show only names and status of changed files
   --numstat      Show number of added and deleted lines without abbreviating
-  --shortstat    Print number of modified files and number of added/deleted
-                 line
+  --shortstat    Print number of modified files and number of added/deleted line
   --summary      Print condensed summary of changes
   -q, --quiet    only print "important" messages
 
-Run git diff with various options on the repositories in the catalogue.
+Run git diff with various options on the repositories in the
+catalogue.
 
 **fetch**
 
@@ -129,13 +144,12 @@ optional arguments:
   --all         Fetch all branches
   --dry-run     Print what would be done without doing it
   -f, --force   Fetch even if there are changes
-  -p, --prune   Before fetching, remove any remote-tracking references that no
-                longer exist on the remote
+  -p, --prune   Before fetching, remove any remote-tracking references that no longer exist on the remote
   -t, --tags    Fetch all tags from remote repositories
   -q, --quiet   only print "important" messages
 
-Run through all repositories and update them if their directories already
-exist on this computer
+Run through all repositories and update them if their directories
+already exist on this computer
 
 **install**
 
@@ -151,8 +165,10 @@ optional arguments:
   -d, --dry-run  Do everything except actually install the repositories
   -q, --quiet    only print "important" messages
 
-Install listed repositories from the catalogue. If a directory exists but is
-not a git repository then initialise the repository and fetch from the remote.
+Install listed repositories from the catalogue.
+
+If a directory exists but is not a git repository then initialise the
+repository and fetch from the remote.
 
 **ls**
 
@@ -195,8 +211,8 @@ optional arguments:
   --ours                Resolve merge conflicts favouring local repository
   -q, --quiet           only print "important" messages
 
-Run through all repositories and update them if their directories already
-exist on this computer
+Run through all repositories and update them if their directories
+already exist on this computer
 
 **push**
 
