@@ -348,7 +348,7 @@ class GitCat:
             if hasattr(options, opt):
                 setattr(self, opt, getattr(options, opt))
             if hasattr(options, 'git_'+opt):
-                setattr(self, opt, getattr(options, opt) or getattr(options, 'git_'+opt))
+                setattr(self, opt, getattr(self, opt) or getattr(options, 'git_'+opt))
 
         # read the catalogue from the rc file
         self.read_catalogue()
