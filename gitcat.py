@@ -562,8 +562,8 @@ class GitCat:
         r'''
         Add the current repository to the catalogue stored in gitcatrc. An
         error is returned if the current directory is not a git repository, if
-        it is a git repositroy but has no remote or if the repository is
-        already in the catalgoue.
+        it is a git repository but has no remote or if the repository is
+        already in the catalogue.
         '''
         if self.options.git_directory is None:
             dire = self.short_path(os.getcwd())
@@ -614,9 +614,6 @@ class GitCat:
         catagalogue.
 
         Example:
-
-        .. code-block::
-
             > git cat branch Code
             Code/Autoweb
               python3 6c2fcd5 Converting to python 3
@@ -922,7 +919,6 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
     '''
 
     def _format_action(self, action):
-        print('formatting {}'.format(action))
         if isinstance(action, argparse._SubParsersAction):
             # inject new class variable for subcommand formatting
             subactions = action._get_subactions()

@@ -64,6 +64,13 @@ class BuildDoc(Command):
             except FileNotFoundError:
                 pass
 
+    @staticmethod
+    def print_help(cmd):
+        '''
+        Print the help for this command with some formatting changes.
+        '''
+        return cmd.format_help().replace('Example:', 'Example:\n\n.. code-block::\n')
+
     def build_readme(self):
         '''
         Construct the README.rst file from the files in the doc directory and
@@ -76,9 +83,8 @@ class BuildDoc(Command):
             readme.write(doc[0])
             readme.write(parser.format_help()+'\n')
             for cmd in commands.choices:
-                readme.write('**{}**\n\n'.format(cmd))
-                print('format help:\n{}'.format(commands.choices[cmd].format_help()))
-                readme.writelines(commands.choices[cmd].format_help()+'\n')
+                readme.write('\n**{}**\n\n'.format(cmd))
+                readme.write(self.print_help(commands.choices[cmd]))
             with open('doc/README-end', 'r') as stop:
                 for line in stop:
                     readme.write(line)
@@ -87,8 +93,8 @@ class BuildDoc(Command):
         '''
         Build the git-cat manual from the README file
         '''
-        subprocess.run('rst2html5.py README.rst > README.html', shell=True)
-        subprocess.run('rst2man.py README.rst > git-cat.1', shell=True)
+        subprocess.run('rst2html5.py README.rst README.html', shell=True)
+        subprocess.run('rst2man.py README.rst git-cat.1', shell=True)
 
 setup(name             = settings.program,
       version          = settings.version,

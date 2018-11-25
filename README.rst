@@ -31,6 +31,7 @@ Commands:
   remove    Remove repository from the catalogue
   status    Print the status of all repositories
 
+
 **add**
 
 usage: git cat add [-h] [-d GIT_DIRECTORY] [-q]
@@ -45,8 +46,8 @@ optional arguments:
 
 Add the current repository to the catalogue stored in gitcatrc. An
 error is returned if the current directory is not a git repository, if
-it is a git repositroy but has no remote or if the repository is
-already in the catalgoue.
+it is a git repository but has no remote or if the repository is
+already in the catalogue.
 
 **branch**
 
@@ -251,7 +252,7 @@ Remove the directory `dire` from the catalogue of repositories to sync
 
 **status**
 
-usage: git cat status [-h] [-l] [-u {no,normal,all}] [-q] [repositories]
+usage: git cat status [-h] [-l] [-u CHOICE] [-q] [repositories]
 
 Print the status of all repositories
 
@@ -261,12 +262,11 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -l, --local           Only compare with local repositories
-  -u {no,normal,all}, --untracked-files {no,normal,all}
-                        Show untracked files using git status mode
+  -u CHOICE, --untracked-files CHOICE
+                        Show untracked files using git status mode (all, no, or normal)
   -q, --quiet           only print "important" messages
 
 Print the status of all of the repositories in the catalogue
-
 Author
 ======
 
