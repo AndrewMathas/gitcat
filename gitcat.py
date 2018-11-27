@@ -94,6 +94,8 @@ ahead_behind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
 # list of files that have changed
 files_changed = re.compile(r'([0-9]+ file(?:s|))(?: changed)')
 
+# remove colons around works
+colon = re.compile(r':([a-z]+):')
 
 # ---------------------------------------------------------------------------
 # settings
@@ -128,7 +130,9 @@ class Settings(dict):
         Return a sanitised version of the doc-string for the method `cdm` of
         `GitCat`. In particular, all code-blocks are removed.
         '''
-        return textwrap.dedent(getattr(GitCat, cmd).__doc__)
+        print('{} -> {}'.format(getattr(GitCat, cmd).__doc__, getattr(GitCat, cmd).__doc__))
+        print('{} -> {}'.format(' '*len(getattr(GitCat, cmd).__doc__), colon.sub('\1',getattr(GitCat, cmd).__doc__)))
+        return textwrap.dedent(colon.sub('\1', getattr(GitCat, cmd).__doc__))
 
     def add_git_options(self, command_parser):
         '''
@@ -173,7 +177,6 @@ class Settings(dict):
                 default=False,
                 action='store_true',
                 help='only print "important" messages')
-
 
     def read_init_file(self, ini_file):
         '''
@@ -930,12 +933,12 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
         if isinstance(action, argparse._SubParsersAction._ChoicesPseudoAction):
             # format subcommand help line
             subcommand = self._format_action_invocation(action)  # type: str
-            width = self._subcommand_max_length
+            width = self._subcommand_max_length+2
             help_text = ""
             if action.help:
                 help_text = self._expand_help(action)
             return "  {:{width}}   {}\n".format(
-                subcommand, help_text, width=width)
+                    ':'+subcommand+':', help_text, width=width)
 
         elif isinstance(action, argparse._SubParsersAction):
             # process subcommand help section

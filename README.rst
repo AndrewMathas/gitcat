@@ -19,17 +19,17 @@ Optional arguments:
   -q, --quiet           Print messages only if repository changes
 
 Commands:
-  add       Add current repository to the catalogue
-  branch    Print status of all branches in repository
-  commit    Commit changes in all repositories
-  diff      Print a diff of the changes in each repository
-  fetch     Fetch all repositories from remote repositories
-  install   Install repository from the catalogue
-  ls        List all repositories in the catalogue
-  pull      Pull all repositories from remote repositories
-  push      Commit and push local repositories to remote repositories
-  remove    Remove repository from the catalogue
-  status    Print the status of all repositories
+  :add:       Add current repository to the catalogue
+  :branch:    Print status of all branches in repository
+  :commit:    Commit changes in all repositories
+  :diff:      Print a diff of the changes in each repository
+  :fetch:     Fetch all repositories from remote repositories
+  :install:   Install repository from the catalogue
+  :ls:        List all repositories in the catalogue
+  :pull:      Pull all repositories from remote repositories
+  :push:      Commit and push local repositories to remote repositories
+  :remove:    Remove repository from the catalogue
+  :status:    Print the status of all repositories
 
 
 **add**
