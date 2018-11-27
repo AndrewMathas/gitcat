@@ -5,14 +5,34 @@ git-cat
 
 *Herding a catalogue of git repositories*
 
+----
+
+Git-cat makes it possible to manage multiple git repositories from the command
+line. Git-cat makes it possible to push and pull from multiple git repositories
+to and from remote servers, such as bitbucket_ and github_, automatically
+committing changes when necessary. As the aim of git-cat is to manage multiple
+repositories simultaneously, the output from git commands is tailored to be
+succinct and to the point.
+
+Git-cat does not support all git commands and nor does it support the full
+functionality of those git commands that it does support. Instead, it provides
+a crude way of synchronising multiple repositories with remote servers. The
+git-cat philosophy is to "do no harm" so, when possible, it uses dry-runs
+before changing any repository and only makes actual changes to the repository
+if the dry-run succeeds.  Any problems encountered by git-cat are printed to
+the terminal.
+
+----
 
 Author
 ......
-Andrew Mathas
-(c) Copyright 2018
 
-Licence
--------
+Andrew Mathas
+
+git-cat Version 1.0
+
+Copyright (C) 2018
+
 GNU General Public License, Version 3, 29 June 2007
 
 This program is free software: you can redistribute it and/or modify it under
@@ -23,6 +43,11 @@ later version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+.. _bitbucket: https://bitbucket.org/
+.. _github: https://github.com
+.. _GPL: http://www.gnu.org/licenses/gpl.html
+.. _Python: https://www.python.org/
 
 '''
 
@@ -127,12 +152,10 @@ class Settings(dict):
     @staticmethod
     def doc_string(cmd):
         '''
-        Return a sanitised version of the doc-string for the method `cdm` of
+        Return a sanitised version of the doc-string for the method `cmd` of
         `GitCat`. In particular, all code-blocks are removed.
         '''
-        print('{} -> {}'.format(getattr(GitCat, cmd).__doc__, getattr(GitCat, cmd).__doc__))
-        print('{} -> {}'.format(' '*len(getattr(GitCat, cmd).__doc__), colon.sub('\1',getattr(GitCat, cmd).__doc__)))
-        return textwrap.dedent(colon.sub('\1', getattr(GitCat, cmd).__doc__))
+        return textwrap.dedent(getattr(GitCat, cmd).__doc__)
 
     def add_git_options(self, command_parser):
         '''
@@ -299,15 +322,14 @@ class Git:
         self.command = command + ' ' + options
 
         if self.returncode != 0:
-            debugging('-' * 40)
-            print('{}: there was an error using git {} {}\n  {}\n'.format(
+            self.error_message = '{}: there was an error using git {} {}\n  {}\n'.format(
                 rep,
                 command,
                 options,
                 git.stderr.decode().strip().replace('\n', '\n  ').replace(
                     '\r', '\n  '),
-            ))
-            debugging('-' * 40)
+            )
+            debugging('{line}{err}{line}'.format(line='-' * 40, err=self.error_message))
             self.git_command_ok = False
         else:
             self.git_command_ok = True
@@ -558,7 +580,8 @@ class GitCat:
 
     # ---------------------------------------------------------------------------
     # Now implement the git cat commands that are available from the command line
-    # The doc-strings for this methods become part of help text in the manual
+    # The doc-strings for this methods become part of help text in the manual.
+    # In particular, any Example blocks become code blocks.
     # ---------------------------------------------------------------------------
 
     def add(self):
@@ -567,6 +590,7 @@ class GitCat:
         error is returned if the current directory is not a git repository, if
         it is a git repository but has no remote or if the repository is
         already in the catalogue.
+
         '''
         if self.options.git_directory is None:
             dire = self.short_path(os.getcwd())
@@ -587,8 +611,8 @@ class GitCat:
         rep = Git(dire, 'remote', 'get-url --push origin')
         if not rep:
             error_message(
-                'Unable to find remote repository for {} :\n  {}'.format(
-                    dire, rep.output))
+                'Unable to find remote repository for {}'.format(dire)
+            )
 
         dire = self.short_path(root.output.strip())
         rep = rep.output.strip()
@@ -614,24 +638,22 @@ class GitCat:
     def branch(self):
         r'''
         Run `git branch --verbose` in selected repositories in the
-        catagalogue.
+        catalogue. This gives a summary of the status of the branches in the
+        repositories managed by git cat.
 
         Example:
             > git cat branch Code
-            Code/Autoweb
-              python3 6c2fcd5 Converting to python 3
-            Code/Bibupdate
-              master  2d2614e [ahead 1] Adding annouce and notes to ctan_specs
-            Code/GitCat        already up to date
-            Code/GitLPDF       already up to date
-            Code/GradedSpecht
-              Antons_deformation 14fc541 Adding braid method to tableau
-              * cartan_type        68480a4 git cat: updating   graded_specht/klr_algebras.py
-              master             862e2f4 Adding braid method to tableau
-            Code/PG            already up to date
-            Code/SmartUnits
-              master cdb337a Minor bug fixes
-            Code/WebQuiz       already up to date
+            Code/Prog1
+              python3 6c2fcd5 Putting out the washing
+            Code/Prog2
+              master  2d2614e [ahead 1] Making some important changes
+            Code/Prog3        already up to date
+            Code/Prog4        already up to date
+            Code/Prog5
+              branch1 14fc541 Adding braid method to tableau
+              * branch2       68480a4 git cat: updating   doc/README.rst
+              master             862e2f4 Adding good stuff
+            Code/Prog6            already up to date
 
         '''
         # need to use -q to stop output being printed to stderr, but then we
@@ -653,7 +675,18 @@ class GitCat:
 
     def ls(self):
         r'''
-        List the repositories managed by git cat
+        List the repositories managed by git cat, together with the location of
+        their remote repository.
+
+        Example:
+            > git cat ls
+            Code/Prog1    = git@bitbucket.org:AndrewsBucket/prog1.git
+            Code/Prog2    = git@bitbucket.org:AndrewsBucket/prog2.git
+            Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
+            Code/Prog4    = git@bitbucket.org:AndrewsBucket/prog4.git
+            Code/GitCat   = gitgithub.com:AndrewMathas/gitcat.git
+            Notes/Life    = gitgithub.com:AndrewMathas/life.git
+
         '''
         print(self.list_catalogue(listing=False))
 
@@ -937,8 +970,7 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
             help_text = ""
             if action.help:
                 help_text = self._expand_help(action)
-            return "  {:{width}}   {}\n".format(
-                    ':'+subcommand+':', help_text, width=width)
+            return "  {:{width}}  {}\n".format(subcommand, help_text, width=width)
 
         elif isinstance(action, argparse._SubParsersAction):
             # process subcommand help section

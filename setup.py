@@ -68,8 +68,12 @@ class BuildDoc(Command):
     def print_help(cmd):
         '''
         Print the help for this command with some formatting changes.
+        Very hacky but it works...
         '''
-        return cmd.format_help().replace('Example:', 'Example:\n\n.. code-block::\n')
+        help =  cmd.format_help()
+        help = help.replace('Example:', 'Example:\n\n.. code-block::\n')
+        help = help.replace('[STRATEGY]', '<STRATEGY>')
+        return help
 
     def build_readme(self):
         '''
@@ -77,17 +81,16 @@ class BuildDoc(Command):
         using gitcat.py --generate_help.
         '''
         from gitcat import setup_command_line_parser, __doc__
-        doc = __doc__.split('Author')
+        doc = __doc__.split('----')
         parser, commands = setup_command_line_parser()
         with open('README.rst','w', newline='\n') as readme:
-            readme.write(doc[0])
-            readme.write(parser.format_help()+'\n')
+            readme.write(doc[0]) # README header
+            readme.write(parser.format_help().replace('Commands:','Commands::\n')+'\n')
+            readme.write(doc[1]) # README blurb
             for cmd in commands.choices:
                 readme.write('\n**{}**\n\n'.format(cmd))
                 readme.write(self.print_help(commands.choices[cmd]))
-            with open('doc/README-end', 'r') as stop:
-                for line in stop:
-                    readme.write(line)
+            readme.write(doc[2]) # README end
 
     def build_manual(self):
         '''

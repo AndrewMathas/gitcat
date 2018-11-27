@@ -4,7 +4,6 @@ git-cat
 
 *Herding a catalogue of git repositories*
 
-
 usage: git cat [-h] [-c CATALOGUE] [-p PREFIX] [-q] <command> [options] ...
 
 Simultaneously synchronise multiple local and remote git repositories
@@ -18,18 +17,36 @@ Optional arguments:
                         Prefix directory name containing all repositories
   -q, --quiet           Print messages only if repository changes
 
-Commands:
-  :add:       Add current repository to the catalogue
-  :branch:    Print status of all branches in repository
-  :commit:    Commit changes in all repositories
-  :diff:      Print a diff of the changes in each repository
-  :fetch:     Fetch all repositories from remote repositories
-  :install:   Install repository from the catalogue
-  :ls:        List all repositories in the catalogue
-  :pull:      Pull all repositories from remote repositories
-  :push:      Commit and push local repositories to remote repositories
-  :remove:    Remove repository from the catalogue
-  :status:    Print the status of all repositories
+Commands::
+
+  add        Add current repository to the catalogue
+  branch     Print status of all branches in repository
+  commit     Commit changes in all repositories
+  diff       Print a diff of the changes in each repository
+  fetch      Fetch all repositories from remote repositories
+  install    Install repository from the catalogue
+  ls         List all repositories in the catalogue
+  pull       Pull all repositories from remote repositories
+  push       Commit and push local repositories to remote repositories
+  remove     Remove repository from the catalogue
+  status     Print the status of all repositories
+
+
+
+Git-cat makes it possible to manage multiple git repositories from the command
+line. Git-cat makes it possible to push and pull from multiple git repositories
+to and from remote servers, such as bitbucket_ and github_, automatically
+committing changes when necessary. As the aim of git-cat is to manage multiple
+repositories simultaneously, the output from git commands is tailored to be
+succinct and to the point.
+
+Git-cat does not support all git commands and nor does it support the full
+functionality of those git commands that it does support. Instead, it provides
+a crude way of synchronising multiple repositories with remote servers. The
+git-cat philosophy is to "do no harm" so, when possible, it uses dry-runs
+before changing any repository and only makes actual changes to the repository
+if the dry-run succeeds.  Any problems encountered by git-cat are printed to
+the terminal.
 
 
 **add**
@@ -48,6 +65,13 @@ Add the current repository to the catalogue stored in gitcatrc. An
 error is returned if the current directory is not a git repository, if
 it is a git repository but has no remote or if the repository is
 already in the catalogue.
+
+Example:
+
+.. code-block::
+
+
+    > git cat add
 
 **branch**
 
@@ -189,7 +213,7 @@ List the repositories managed by git cat
 **pull**
 
 usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t]
-                    [-s [STRATEGY]] [--recursive] [--theirs] [--ours] [-q]
+                    [-s <STRATEGY>] [--recursive] [--theirs] [--ours] [-q]
                     [repositories]
 
 Pull all repositories from remote repositories
@@ -205,7 +229,7 @@ optional arguments:
   --squash              Squash the merge
   --stat                Show a diffstat at the end of the merge
   -t, --tags            Fetch all tags from remote repositories
-  -s [STRATEGY], --strategy [STRATEGY]
+  -s <STRATEGY>, --strategy <STRATEGY>
                         Use the specified merge strategy
   --recursive           Use recursive three-way merge
   --theirs              Resolve merge conflicts favouring remote repository
@@ -267,8 +291,10 @@ optional arguments:
   -q, --quiet           only print "important" messages
 
 Print the status of all of the repositories in the catalogue
+
+
 Author
-======
+......
 
 Andrew Mathas
 
@@ -291,3 +317,4 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 .. _github: https://github.com
 .. _GPL: http://www.gnu.org/licenses/gpl.html
 .. _Python: https://www.python.org/
+
