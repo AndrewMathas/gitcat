@@ -7,21 +7,39 @@ git-cat
 
 ----
 
-Git-cat makes it possible to manage multiple git repositories from the command
-line. Git-cat makes it possible to push and pull from multiple git repositories
-to and from remote servers, such as bitbucket_ and github_, automatically
-committing changes when necessary. As the aim of git-cat is to manage multiple
-repositories simultaneously, the output from git commands is tailored to be
-succinct and to the point.
+Git-cat it provides a *crude* way of synchronising multiple git repositories
+with remote servers from the command line. In particular, you can use Git-cat
+to push and pull from multiple git repositories to and from remote servers,
+such as bitbucket_ and github_, automatically committing changes as necessary.
+As the aim of git-cat is to manage multiple repositories simultaneously, the
+output from git commands is tailored to be succinct and to the point.
 
 Git-cat does not support all git commands and nor does it support the full
-functionality of those git commands that it does support. Instead, it provides
-a crude way of synchronising multiple repositories with remote servers. The
-git-cat philosophy is to "do no harm" so, when possible, it uses dry-runs
-before changing any repository and only makes actual changes to the repository
-if the dry-run succeeds.  Any problems encountered by git-cat are printed to
-the terminal.
+functionality of those git commands that it does support. The git-cat
+philosophy is to "do no harm" so, when possible, it uses dry-runs before
+changing any repository and only makes actual changes to the repository if the
+dry-run succeeds.  Any problems encountered by git-cat are printed to the
+terminal.
 
+By default, the git-cat commands are applied to all of the repositories that
+are managed by git-cat, however, repositories that the command is applied to by 
+supplying a regular expression.
+
+Examples:
+    > git cat pull       # pull from all repositories
+    > git cat pull Code  # pull from all "Code" repositories
+
+The remote repositories are accessed in the normal way using git. Ideally, they
+will be set up with ssh access so that password are not required. If git
+requires a password for a repository then you will be prompted to supply it.
+
+Files:
+
+- gitcatrc   The gitcatrc file contains the catalogue of repositories
+             maintained by `git cat`. This file will be stored in the
+             directory ~/.dotfiles/config, if it exists, and otherwise it
+             defaults to `~/.gitcatrc`. This file can be overridden using
+             the `-c` command line option.
 ----
 
 Author
@@ -48,16 +66,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 .. _github: https://github.com
 .. _GPL: http://www.gnu.org/licenses/gpl.html
 .. _Python: https://www.python.org/
-
 '''
 
 # ---------------------------------------------------------------------------
 # TODO:
-#  - fix README and documentation
 #  - debugging and testing...
 #  - make "git cat git" command work
 #  - make "git cat pull" first update the repository containing the gitcatrc file and
-#     then reread it
+#     then reread it? wanted??
 #  - add a "git cat --set-as-defaults cmd [options]" option to set defaults
 #     for a given command and then store the information into the gitcatrc
 #     file. Will need to be clever to avoid code duplication...possibly add all
@@ -157,12 +173,12 @@ class Settings(dict):
         '''
         return textwrap.dedent(getattr(GitCat, cmd).__doc__)
 
-    def add_git_options(self, command_parser):
+    def add_git_options(self, commands):
         '''
-        Generate all of the git-cat command options as parsers of `command_parser`
+        Generate all of the git-cat command options as parsers of `commands`
         '''
         for cmd in self.commands:
-            command = command_parser.add_parser(
+            command = commands.add_parser(
                 cmd,
                 help=self.commands[cmd]['description'],
                 description=self.commands[cmd]['description'],
@@ -574,7 +590,7 @@ class GitCat:
             'rep message: quiet={}, self.quiet={} and quietness={}\n{}'.format(
                 quiet, self.quiet, not (quiet and self.quiet), '-' * 40))
         if not (quiet and self.quiet):
-            print('{:<{max}} {}'.format(rep, message, max=self.max), 
+            print('{:<{max}} {}'.format(rep, message, max=self.max),
                   end=ending)
             debugging('-' * 40)
 
@@ -684,8 +700,9 @@ class GitCat:
             Code/Prog2    = git@bitbucket.org:AndrewsBucket/prog2.git
             Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
             Code/Prog4    = git@bitbucket.org:AndrewsBucket/prog4.git
-            Code/GitCat   = gitgithub.com:AndrewMathas/gitcat.git
-            Notes/Life    = gitgithub.com:AndrewMathas/life.git
+            Code/GitCat   = git@gitgithub.com:AndrewMathas/gitcat.git
+            Notes/Life    = git@gitgithub.com:AndrewMathas/life.git
+            Stuff         = git@some.random.rep.com:Me/stuffing.git
 
         '''
         print(self.list_catalogue(listing=False))
@@ -714,7 +731,7 @@ class GitCat:
             debugging('\nDIFFING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
-                diff = Git(rep, 'diff' 'options')
+                diff = Git(rep, 'diff', options)
                 if diff:
                     if diff.output != '':
                         self.rep_message(rep, diff.output, quiet=False)
@@ -725,6 +742,15 @@ class GitCat:
         r'''
         Run through all repositories and update them if their directories
         already exist on this computer
+
+        Example:
+            > git cat fetch
+            Code/Prog1    already up to date
+            Code/Prog2    already up to date
+            Code/Prog3    already up to date
+            Code/Prog4    already up to date
+            Code/GitCat   already up to date
+            Notes/Life    already up to date
         '''
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
@@ -758,6 +784,15 @@ class GitCat:
 
         If a directory exists but is not a git repository then initialise the
         repository and fetch from the remote.
+
+        By default all repositories are installed, however, by specifying a
+        regular expression for the repositories you can install a subset of the
+        repositories managed by git cat.abs
+
+        Examples:
+
+            > git cat install       # install all repositories managed by git cat
+            > git cat install Code  # install all "Code" repositories managed by git cat
         '''
         for rep in self.repositories():
             debugging('\nINSTALLING ' + rep)
@@ -793,7 +828,7 @@ class GitCat:
     def pull(self):
         r'''
         Run through all repositories and update them if their directories
-        already exist on this computer. Unless the  `--quiet` option is used, 
+        already exist on this computer. Unless the  `--quiet` option is used,
         a message is printed to give the summarise the status of the
         repository.
 
@@ -801,9 +836,9 @@ class GitCat:
             > git cat pull
             Code/Prog1    already up to date
             Code/Prog2    already up to date
-            Code/Prog3    already up to date
-            Code/Prog4    already up to date
             Code/GitCat   already up to date
+              remote: Counting objects: 8, done.
+              remote: Total 8 (delta 6), reused 0 (delta 0)
             Notes/Life    already up to date
 
         '''
@@ -842,7 +877,12 @@ class GitCat:
             Code/Prog2    already up to date
             Code/Prog3    already up to date
             Code/Prog4    already up to date
-            Code/GitCat   already up to date
+            Code/GitCat   commit
+              [master 442822d] git cat: updating   gitcat.py
+              1 file changed, 44 insertions(+), 5 deletions(-)
+              To bitbucket.org:AndrewsBucket/gitcat.git
+              refs/heads/master:refs/heads/master	6ffeb9d..442822d
+              Done
             Notes/Life    already up to date
 
         '''
@@ -985,10 +1025,8 @@ class GitCat:
 
 
 # ---------------------------------------------------------------------------
-SUPPRESS = '==SUPPRESS=='
-
 class GitCatHelpFormatter(argparse.HelpFormatter):
-    ''' 
+    '''
     Override help formatter so that we can print a list of ythe possible
     commands together with a quick summary of them
     '''
@@ -1049,7 +1087,7 @@ def setup_command_line_parser():
 
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
-        #add_help=False,
+        add_help=False,
         description='Simultaneously synchronise multiple local and remote git repositories',
         formatter_class=GitCatHelpFormatter,
         prog='git cat',
@@ -1083,6 +1121,12 @@ def setup_command_line_parser():
     #     default=False,
     #     help='use the current options for <command> as the default')
 
+    # override default help mechanism
+    parser.add_argument('-h', '--help',
+        action='count',
+        help='help: for extended help use -hh and -hhh',
+        default=0)
+
     # options suppressed from help
     parser.add_argument(
         '--debugging',
@@ -1099,26 +1143,44 @@ def setup_command_line_parser():
     # ---------------------------------------------------------------------------
     # add catalogue commands using settings and the git-options.ini file
     # ---------------------------------------------------------------------------
-    command_parser = parser.add_subparsers(
+    commands = parser.add_subparsers(
         title='Commands',
         help='Subcommand to run',
         dest='command')
-    settings.add_git_options(command_parser)
+    settings.add_git_options(commands)
     parser._optionals.title = 'Optional arguments'
-    return parser, command_parser
+    return parser, commands
 
 
 def main():
     r'''
     Parse command line options and then run git cat
     '''
-    parser, command_parser = setup_command_line_parser()
+    parser, commands = setup_command_line_parser()
     options = parser.parse_args()
     settings.DEBUGGING = options.debugging
 
-    if options.command is None:
+    if options.help>0:
+        parser.print_help()
+
+        if options.help > 1:
+            doc = __doc__.split('----')
+            print(doc[1])
+
+
+        if options.help > 2:
+            for cmd in commands.choices:
+                print('{}\n{}'.format(cmd, '-'*len(cmd)))
+                commands.choices[cmd].print_help()
+                print()
+
+        sys.exit()
+
+    elif options.command is None:
         parser.print_help()
         sys.exit(1)
+
+
 
     GitCat(options)
 

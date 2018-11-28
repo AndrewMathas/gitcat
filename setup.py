@@ -65,14 +65,19 @@ class BuildDoc(Command):
                 pass
 
     @staticmethod
-    def print_help(cmd):
+    def print_help(help):
         '''
         Print the help for this command with some formatting changes.
         Very hacky but it works...
         '''
-        help =  cmd.format_help()
-        help = help.replace('Example:', 'Example:\n\n.. code-block::\n')
-        help = help.replace('[STRATEGY]', '<STRATEGY>')
+        replacements = ['Example:', '*Example*:\n\n.. code-block:: bash\n',
+                        'Examples:', '*Examples*:\n\n.. code-block:: bash\n',
+                        '[STRATEGY]', '<STRATEGY>'
+        ]
+        rep=0
+        while rep < len(replacements):
+            help = help.replace(replacements[rep], replacements[rep+1])
+            rep += 2
         return help
 
     def build_readme(self):
@@ -86,11 +91,12 @@ class BuildDoc(Command):
         with open('README.rst','w', newline='\n') as readme:
             readme.write(doc[0]) # README header
             readme.write(parser.format_help().replace('Commands:','Commands::\n')+'\n')
-            readme.write(doc[1]) # README blurb
+            readme.write(self.print_help(doc[1])) # README blurb
             for cmd in commands.choices:
-                readme.write('\n**{}**\n\n'.format(cmd))
-                readme.write(self.print_help(commands.choices[cmd]))
+                readme.write('\n------------\n\n**{}**\n\n'.format(cmd))
+                readme.write(self.print_help(commands.choices[cmd].format_help()))
             readme.write(doc[2]) # README end
+            readme.write('.. _gitcat: {}'.format(settings.repository))
 
     def build_manual(self):
         '''
@@ -110,6 +116,7 @@ setup(name             = settings.program,
       keywords         = 'git, catalogue, repositories',
 
       cmdclass         = {'doc'   : BuildDoc},
+      data_files       = [('man/man1', ['git-cat.1'])],
 
       packages=find_packages(),
       python_requires='>=3.7',
