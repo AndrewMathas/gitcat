@@ -793,7 +793,19 @@ class GitCat:
     def pull(self):
         r'''
         Run through all repositories and update them if their directories
-        already exist on this computer
+        already exist on this computer. Unless the  `--quiet` option is used, 
+        a message is printed to give the summarise the status of the
+        repository.
+
+        Example:
+            > git cat pull
+            Code/Prog1    already up to date
+            Code/Prog2    already up to date
+            Code/Prog3    already up to date
+            Code/Prog4    already up to date
+            Code/GitCat   already up to date
+            Notes/Life    already up to date
+
         '''
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
@@ -818,8 +830,21 @@ class GitCat:
 
     def push(self):
         r'''
-        Run through all repositories and push them to bitbucket if their directories
-        exist on this computer. Commit the repository if it has changes
+        Run through all installed repositories and push them to their remote
+        repositories. Any uncommitted repository with local changes will be
+        committed and the commit message listing the files that have changed.
+        Unless the `-quiet` option is used, a summary of the status of
+        each repository is printed with each push.
+
+        Example:
+            > git cat pull
+            Code/Prog1    already up to date
+            Code/Prog2    already up to date
+            Code/Prog3    already up to date
+            Code/Prog4    already up to date
+            Code/GitCat   already up to date
+            Notes/Life    already up to date
+
         '''
         options = self.process_options('--porcelain --follow-tags')
         for rep in self.repositories():
@@ -860,7 +885,8 @@ class GitCat:
 
     def remove(self):
         r'''
-        Remove the directory `dire` from the catalogue of repositories to sync
+        Remove the directory `dire` from the catalogue of repositories to
+        sync. An error is given if got cat is not managing this repository.
         '''
         if self.options.git_directory is None:
             dire = self.short_path(os.getcwd())
@@ -890,7 +916,20 @@ class GitCat:
 
     def status(self):
         r'''
-        Print the status of all of the repositories in the catalogue
+        Print a summary of the status of all of the repositories in the
+        catalogue. The name is slightly misleading as this command does not
+        just run `git status` on each repository and, instead, it queries the
+        remote repositories to determine whether each repository is ahead or
+        behind the remote repository.
+
+        Example:
+            > git cat status
+            Code/Prog1    up to date
+            Code/Prog2    ahead 1
+            Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
+            Code/Prog4    up to date= git@bitbucket.org:AndrewsBucket/prog4.git
+            Code/GitCat   behind 1
+            Notes/Life    up to date= gitgithub.com:AndrewMathas/life.git
         '''
         status_options = self.process_options('--porcelain --short --branch')
         diff_options = '--shortstat --no-color'
