@@ -1,53 +1,68 @@
 #!/usr/bin/env python3
 r'''
-git-cat
-=======
+==========
+`git cat`_
+==========
 
 *Herding a catalogue of git repositories*
 
-----
+******
 
-Git-cat it provides a *crude* way of synchronising multiple git repositories
-with remote servers from the command line. In particular, you can use Git-cat
-to push and pull from multiple git repositories to and from remote servers,
-such as bitbucket_ and github_, automatically committing changes as necessary.
-As the aim of git-cat is to manage multiple repositories simultaneously, the
-output from git commands is tailored to be succinct and to the point.
+`Git cat` is a command line tool for synchronising multiple git repositories
+with remote servers from the command line. This tool is not intended to be used
+on large projects with multiple developers but, instead, it is aimed at the
+lone developer who has wants to synchronise multiple git repositories that live
+on several computers. In particular, with one `git cat` command you can run git
+commands on multiple git repositories, such as pushing or pulling from remote
+servers, such as bitbucket_ and github_. When pushing, any local changes to the
+repositores will be automatically commited.
 
-Git-cat does not support all git commands and nor does it support the full
-functionality of those git commands that it does support. The git-cat
-philosophy is to "do no harm" so, when possible, it uses dry-runs before
-changing any repository and only makes actual changes to the repository if the
-dry-run succeeds.  Any problems encountered by git-cat are printed to the
-terminal.
+`Git cat` provides only a thin veneer over git. It does not support all git
+commands and nor does it support the full functionality of those git commands
+that it does support. The `git cat` philosophy is to "do no harm" so, when
+possible, it uses dry-runs before changing any repository and it wil only
+change a repository if the dry-run succeeds. Any problems encountered by `git
+cat` are printed to the terminal (stdout). The aim of `git cat` is to
+streamline the management of multiple git repositories so, by default, it
+prints a summary of what it does to each repository to the terminal.
 
-By default, the git-cat commands are applied to all of the repositories that
-are managed by git-cat, however, repositories that the command is applied to by 
-supplying a regular expression.
+By default, the `git cat` commands are applied to all of the repositories that
+are managed by `git cat`, however, repositories that the command is applied to
+by supplying a regular expression.
 
 Examples:
     > git cat pull       # pull from all repositories
     > git cat pull Code  # pull from all "Code" repositories
 
+This makes it possible, for example, to push or pull from related git
+repositories that are in different directories.
+
 The remote repositories are accessed in the normal way using git. Ideally, they
-will be set up with ssh access so that password are not required. If git
-requires a password for a repository then you will be prompted to supply it.
+will be set up with ssh access so that passwords are not required. If git
+requires a password for a repository then you will be prompted to supply it in
+the usual way.
 
-Files:
+The gitcatrc file
+.................
 
-- gitcatrc   The gitcatrc file contains the catalogue of repositories
-             maintained by `git cat`. This file will be stored in the
-             directory ~/.dotfiles/config, if it exists, and otherwise it
-             defaults to `~/.gitcatrc`. This file can be overridden using
-             the `-c` command line option.
-----
+The gitcatrc file contains the catalogue of repositories maintained by `git
+cat`. This file will be stored in the directory ~/.dotfiles/config, if it
+exists, and otherwise it defaults to `~/.gitcatrc`. This location of this file
+can be changed from the command line using the `-c` command line option.
+
+The `git cat` commands are only applied to those repositories that have been
+"installed" using `git cat install`. Consequently, if the gitcatrc file is
+itself in a git repository then different computers that use this file can
+syncrhonise different repositories using `git cat`.
+
+******
 
 Author
 ......
 
 Andrew Mathas
 
-git-cat Version 1.0
+`git cat` Version 1.0
 
 Copyright (C) 2018
 
@@ -73,7 +88,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - debugging and testing...
 #  - make "git cat git" command work
 #  - make "git cat pull" first update the repository containing the gitcatrc file and
-#     then reread it? wanted??
+#     then reread it ??wanted??
 #  - add a "git cat --set-as-defaults cmd [options]" option to set defaults
 #     for a given command and then store the information into the gitcatrc
 #     file. Will need to be clever to avoid code duplication...possibly add all
@@ -85,7 +100,6 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - add exclude option
 
 import argparse
-import itertools
 import os
 import re
 import shutil
@@ -96,7 +110,6 @@ import textwrap
 
 # ---------------------------------------------------------------------------
 # error messages and debugging
-
 
 def error_message(err):
     r'''
@@ -118,7 +131,6 @@ def graceful_exit(sig, frame):
     print('program terminated (signal {})'.format(sig))
     debugging('{}'.format(frame))
     sys.exit()
-
 
 signal.signal(signal.SIGINT, graceful_exit)
 signal.signal(signal.SIGTERM, graceful_exit)
@@ -162,7 +174,7 @@ class Settings(dict):
         if not os.path.isfile(self.rc_file):
             self.rc_file = os.path.expanduser('~/.gitcatrc')
 
-        self.read_init_file(ini_file)
+        self.read_ini_file(ini_file)
         self.read_git_options(git_options_file)
 
     @staticmethod
@@ -175,7 +187,7 @@ class Settings(dict):
 
     def add_git_options(self, commands):
         '''
-        Generate all of the git-cat command options as parsers of `commands`
+        Generate all of the `git cat` command options as parsers of `commands`
         '''
         for cmd in self.commands:
             command = commands.add_parser(
@@ -217,7 +229,7 @@ class Settings(dict):
                 action='store_true',
                 help='only print "important" messages')
 
-    def read_init_file(self, ini_file):
+    def read_ini_file(self, ini_file):
         '''
         Read and store the information in the ini file
         '''
@@ -280,11 +292,11 @@ class Settings(dict):
                         else:
                             try:
                                 self.commands[command][opt][choices[0]] = eval(choices[1])
-                            except (NameError, SyntaxError, TypeError) as err:
+                            except (NameError, SyntaxError, TypeError):
                                 self.commands[command][opt][choices[0]] = choices[1]
                     else:
                         error_message(
-                            'syntax error in {} on the line\n {}'.format( options_file, line)
+                            'syntax error in {} on the line\n {}'.format(options_file, line)
                         )
 
     def save_settings(self):
@@ -406,7 +418,8 @@ class GitCat:
         # run corresponding command
         getattr(self, options.command)()
 
-    def changed_files(self, rep):
+    @staticmethod
+    def changed_files(rep):
         r'''
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
@@ -602,11 +615,14 @@ class GitCat:
 
     def add(self):
         r'''
-        Add the current repository to the catalogue stored in gitcatrc. An
-        error is returned if the current directory is not a git repository, if
-        it is a git repository but has no remote or if the repository is
-        already in the catalogue.
+        Add the current repository to the catalogue stored in the gitcatrc
+        file. An error is returned if any of the following hold:
+        - the current directory is already in the git cat catalogue
+        - the current directory is not contained in a git repository
+        - the current directory does not have a remote a git repository
 
+        Example:
+            > git cat add  # add the current directory to the catalogue
         '''
         if self.options.git_directory is None:
             dire = self.short_path(os.getcwd())
@@ -709,10 +725,13 @@ class GitCat:
 
     def commit(self):
         r'''
-        Commit all of the repositories in the catalogue where files have
-        changed. The work is actually done by `self.commit_repository`, which
-        commits only one repository, since other methods need to call this as
-        well.
+        Commit all changes in the selected repositories in the catalogue. The
+        commit message will list the files that were changed. This command is
+        provided mainly for completeness and, instead, `git cat push` would
+        probably be used.
+
+        Example:
+            > git cat commit
         '''
         for rep in self.repositories():
             debugging('\nCOMMITTING ' + rep)
@@ -724,6 +743,19 @@ class GitCat:
         r'''
         Run git diff with various options on the repositories in the
         catalogue.
+
+        Example:
+
+            > git cat diff Code
+            Code/Prog1   up to date
+            Code/Prog2   up to date
+            Code/GitCat  diff --git c/gitcat.py w/gitcat.py
+            index b32a07f..c32a435 100644
+            --- c/gitcat.py
+            +++ w/gitcat.py
+            @@ -29,16 +29,25 @@ Examples:
+            -gitcatrc:
+            +The gitcatrc file:
         '''
         options = self.process_options()
         options += ' HEAD'
@@ -734,7 +766,7 @@ class GitCat:
                 diff = Git(rep, 'diff', options)
                 if diff:
                     if diff.output != '':
-                        self.rep_message(rep, diff.output, quiet=False)
+                        self.rep_message(rep, diff.output.lstrip(), quiet=False)
                     else:
                         self.rep_message(rep, 'up to date')
 
@@ -764,19 +796,9 @@ class GitCat:
                     if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        self.rep_message(rep, pull.output)
+                        self.rep_message(rep, pull.output.lstrip())
             else:
                 self.rep_message(rep, 'not on system')
-
-    def git(self, commands):
-        r''' Run git commands on every repository in the catalogue '''
-        git_command = '{}'.format(' '.join(cmd for cmd in commands))
-        for rep in self.repositories():
-            debugging('\nGITTING ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                print('Repository = {}, command = {}'.format(rep, git_command))
-                Git(git_command)
 
     def install(self):
         r'''
@@ -872,7 +894,7 @@ class GitCat:
         each repository is printed with each push.
 
         Example:
-            > git cat pull
+            > git cat push
             Code/Prog1    already up to date
             Code/Prog2    already up to date
             Code/Prog3    already up to date
@@ -925,14 +947,26 @@ class GitCat:
 
     def remove(self):
         r'''
-        Remove the directory `dire` from the catalogue of repositories to
-        sync. An error is given if got cat is not managing this repository.
+        Remove the current repository to the catalogue stored in the gitcatrc
+        file. An error is returned if any of the following hold:
+        - the current directory is not in the git cat catalogue
+        - the current directory is not contained in a git repository
+
+        Example:
+            git cat remove  # remove the current directory to the catalogue
+
         '''
         if self.options.git_directory is None:
             dire = self.short_path(os.getcwd())
         else:
             dire = self.short_path(os.path.expanduser(self.options.repository))
         dire = self.expand_path(dire)
+
+        # if possible remove the prefix from dire to set the repository
+        if dire.startswith(self.prefix):
+            rep = dire[len(self.prefix)+1:] # skip over prefix + leading /
+        else:
+            rep = dire
 
         if not (rep in self.catalogue and self.is_git_repository(dire)):
             error_message('unknown repository {}'.format(dire))
@@ -987,8 +1021,7 @@ class GitCat:
                     status = Git(rep, 'status', status_options)
                     if status:
                         changes = ahead_behind.search(status.output)
-                        changes = '' if changes is None else changes.group(
-                        )[1:-1]
+                        changes = '' if changes is None else changes.group()[1:-1]
 
                         if '\n' in status.output:
                             status.output = status.output[status.output.
@@ -1001,8 +1034,7 @@ class GitCat:
                         changed = ''
                         if diff:
                             changed = files_changed.search(diff.output)
-                            changed = '' if changed is None else 'uncommitted changes in ' + changed.groups(
-                            )[0]
+                            changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
 
                         debugging('changes = {}\nchanged={}\nstatus={}'.format(
                             changes, changed, status.output))
@@ -1027,7 +1059,7 @@ class GitCat:
 # ---------------------------------------------------------------------------
 class GitCatHelpFormatter(argparse.HelpFormatter):
     '''
-    Override help formatter so that we can print a list of ythe possible
+    Override help formatter so that we can print a list of the possible
     commands together with a quick summary of them
     '''
 
@@ -1160,11 +1192,11 @@ def main():
     options = parser.parse_args()
     settings.DEBUGGING = options.debugging
 
-    if options.help>0:
+    if options.help > 0:
         parser.print_help()
 
         if options.help > 1:
-            doc = __doc__.split('----')
+            doc = __doc__.split('******')
             print(doc[1])
 
 

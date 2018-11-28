@@ -1,6 +1,7 @@
 
-git-cat
-=======
+==========
+`git cat`_
+==========
 
 *Herding a catalogue of git repositories*
 
@@ -33,45 +34,60 @@ Commands::
 
 
 
-Git-cat it provides a *crude* way of synchronising multiple git repositories
-with remote servers from the command line. In particular, you can use Git-cat
-to push and pull from multiple git repositories to and from remote servers,
-such as bitbucket_ and github_, automatically committing changes as necessary.
-As the aim of git-cat is to manage multiple repositories simultaneously, the
-output from git commands is tailored to be succinct and to the point.
+`Git cat` is a command line tool for synchronising multiple git repositories
+with remote servers from the command line. This tool is not intended to be used
+on large projects with multiple developers but, instead, it is aimed at the
+lone developer who has wants to synchronise multiple git repositories that live
+on several computers. In particular, with one `git cat` command you can run git
+commands on multiple git repositories, such as pushing or pulling from remote
+servers, such as bitbucket_ and github_. When pushing, any local changes to the
+repositores will be automatically commited.
 
-Git-cat does not support all git commands and nor does it support the full
-functionality of those git commands that it does support. The git-cat
-philosophy is to "do no harm" so, when possible, it uses dry-runs before
-changing any repository and only makes actual changes to the repository if the
-dry-run succeeds.  Any problems encountered by git-cat are printed to the
-terminal.
+`Git cat` provides only a thin veneer over git. It does not support all git
+commands and nor does it support the full functionality of those git commands
+that it does support. The `git cat` philosophy is to "do no harm" so, when
+possible, it uses dry-runs before changing any repository and it wil only
+change a repository if the dry-run succeeds. Any problems encountered by `git
+cat` are printed to the terminal (stdout). The aim of `git cat` is to
+streamline the management of multiple git repositories so, by default, it
+prints a summary of what it does to each repository to the terminal.
 
-By default, the git-cat commands are applied to all of the repositories that
-are managed by git-cat, however, repositories that the command is applied to by suppling a regular expression.
+By default, the `git cat` commands are applied to all of the repositories that
+are managed by `git cat`, however, repositories that the command is applied to
+by supplying a regular expression.
 
 *Examples*:
 
 .. code-block:: bash
 
     > git cat pull       # pull from all repositories
-    > git cat pull Code  # pull from all "Code" repositories 
+    > git cat pull Code  # pull from all "Code" repositories
+
+This makes it possible, for example, to push or pull from related git
+repositories that are in different directories.
 
 The remote repositories are accessed in the normal way using git. Ideally, they
-will be set up with ssh access so that password are not required. If git
-requires a password for a repository then you will be prompted to supply it.
+will be set up with ssh access so that passwords are not required. If git
+requires a password for a repository then you will be prompted to supply it in
+the usual way.
 
-Files:
+The gitcatrc file
+.................
 
-    - gitcatrc   The gitcatrc file contains the catalogue of repositories
-                 maintained by `git cat`. This file will be stored in the 
-                 directory ~/.dotfiles/config, if it exists, and otherwise it
-                 defaults to `~/.gitcatrc`. This file can be overridden using
-                 the `-c` command line option.
+The gitcatrc file contains the catalogue of repositories maintained by `git
+cat`. This file will be stored in the directory ~/.dotfiles/config, if it
+exists, and otherwise it defaults to `~/.gitcatrc`. This location of this file
+can be changed from the command line using the `-c` command line option.
+
+The `git cat` commands are only applied to those repositories that have been
+"installed" using `git cat install`. Consequently, if the gitcatrc file is
+itself in a git repository then different computers that use this file can
+syncrhonise different repositories using `git cat`.
+
 
 ------------
 
-**add**
+**git cat add**
 
 usage: git cat add [-h] [-d GIT_DIRECTORY] [-q]
 
@@ -83,14 +99,21 @@ optional arguments:
                         Add repository from specified directory
   -q, --quiet           only print "important" messages
 
-Add the current repository to the catalogue stored in gitcatrc. An
-error is returned if the current directory is not a git repository, if
-it is a git repository but has no remote or if the repository is
-already in the catalogue.
+Add the current repository to the catalogue stored in the gitcatrc
+file. An error is returned if any of the following hold:
+- the current directory is already in the git cat catalogue
+- the current directory is not contained in a git repository
+- the current directory does not have a remote a git repository
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat add  # add the current directory to the catalogue
 
 ------------
 
-**branch**
+**git cat branch**
 
 usage: git cat branch [-h] [-q] [repositories]
 
@@ -126,7 +149,7 @@ repositories managed by git cat.
 
 ------------
 
-**commit**
+**git cat commit**
 
 usage: git cat commit [-h] [-a] [-b] [-d] [-v] [-q] [repositories]
 
@@ -143,14 +166,20 @@ optional arguments:
   -v, --verbose  Print a unified diff for the commit
   -q, --quiet    only print "important" messages
 
-Commit all of the repositories in the catalogue where files have
-changed. The work is actually done by `self.commit_repository`, which
-commits only one repository, since other methods need to call this as
-well.
+Commit all changes in the selected repositories in the catalogue. The
+commit message will list the files that were changed. This command is
+provided mainly for completeness and, instead, `git cat push` would
+probably be used.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat commit
 
 ------------
 
-**diff**
+**git cat diff**
 
 usage: git cat diff [-h] [--name-only] [--name-status] [--numstat]
                     [--shortstat] [--summary] [-q]
@@ -173,9 +202,28 @@ optional arguments:
 Run git diff with various options on the repositories in the
 catalogue.
 
+*Example*:
+
+.. code-block:: bash
+
+
+    > git cat diff Code
+    Code/Prog1   up to date
+    Code/Prog2   up to date
+    Code/GitCat  diff --git c/gitcat.py w/gitcat.py
+    index b32a07f..c32a435 100644
+    --- c/gitcat.py
+    +++ w/gitcat.py
+    @@ -29,16 +29,25 @@ *Examples*:
+
+.. code-block:: bash
+
+    -gitcatrc:
+    +The gitcatrc file:
+
 ------------
 
-**fetch**
+**git cat fetch**
 
 usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q]
                      [repositories]
@@ -211,7 +259,7 @@ already exist on this computer
 
 ------------
 
-**install**
+**git cat install**
 
 usage: git cat install [-h] [-d] [-q] [repositories]
 
@@ -244,7 +292,7 @@ repositories managed by git cat.abs
 
 ------------
 
-**ls**
+**git cat ls**
 
 usage: git cat ls [-h] [-q] [repositories]
 
@@ -275,7 +323,7 @@ their remote repository.
 
 ------------
 
-**pull**
+**git cat pull**
 
 usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t]
                     [-s <STRATEGY>] [--recursive] [--theirs] [--ours] [-q]
@@ -302,7 +350,7 @@ optional arguments:
   -q, --quiet           only print "important" messages
 
 Run through all repositories and update them if their directories
-already exist on this computer. Unless the  `--quiet` option is used, 
+already exist on this computer. Unless the  `--quiet` option is used,
 a message is printed to give the summarise the status of the
 repository.
 
@@ -320,7 +368,7 @@ repository.
 
 ------------
 
-**push**
+**git cat push**
 
 usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q] [repositories]
 
@@ -347,7 +395,7 @@ each repository is printed with each push.
 
 .. code-block:: bash
 
-    > git cat pull
+    > git cat push
     Code/Prog1    already up to date
     Code/Prog2    already up to date
     Code/Prog3    already up to date
@@ -362,7 +410,7 @@ each repository is printed with each push.
 
 ------------
 
-**remove**
+**git cat remove**
 
 usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
 
@@ -375,12 +423,20 @@ optional arguments:
                         Remove repository from specified directory
   -q, --quiet           only print "important" messages
 
-Remove the directory `dire` from the catalogue of repositories to
-sync. An error is given if got cat is not managing this repository.
+Remove the current repository to the catalogue stored in the gitcatrc
+file. An error is returned if any of the following hold:
+- the current directory is not in the git cat catalogue
+- the current directory is not contained in a git repository
+
+*Example*:
+
+.. code-block:: bash
+
+    git cat remove  # remove the current directory to the catalogue
 
 ------------
 
-**status**
+**git cat status**
 
 usage: git cat status [-h] [-l] [-u CHOICE] [-q] [repositories]
 
@@ -420,7 +476,7 @@ Author
 
 Andrew Mathas
 
-git-cat Version 1.0
+`git cat` Version 1.0
 
 Copyright (C) 2018
 
@@ -439,4 +495,4 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 .. _github: https://github.com
 .. _GPL: http://www.gnu.org/licenses/gpl.html
 .. _Python: https://www.python.org/
-.. _gitcat: bitbucket.org/AndrewsBucket/gitcat/
+.. _`git cat`: https://bitbucket.org/AndrewsBucket/gitcat/
