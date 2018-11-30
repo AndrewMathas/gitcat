@@ -769,17 +769,19 @@ class GitCat:
 
     def fetch(self):
         r'''
-        Run through all repositories and update them if their directories
-        already exist on this computer
+        Run `git fetch -q --progress` on the installed git cat repositories.
 
         Example:
             > git cat fetch
-            Code/Prog1    already up to date
-            Code/Prog2    already up to date
-            Code/Prog3    already up to date
-            Code/Prog4    already up to date
-            Code/GitCat   already up to date
-            Notes/Life    already up to date
+            Rep1  already up to date
+            Rep2  already up to date
+            Rep3  remote: Counting objects: 3, done.
+              remote: Compressing objects:  33% (1/3)
+              remote: Compressing objects:  66% (2/3)
+              remote: Compressing objects: 100% (3/3)
+              remote: Compressing objects: 100% (3/3), done.
+              remote: Total 3 (delta 2), reused 0 (delta 0)
+
         '''
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
