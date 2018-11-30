@@ -1,5 +1,5 @@
 include *.ini
 include *.py
-include *.rst
+include README.*
 include LICENSE.txt
 include git-cat.1

@@ -4,6 +4,11 @@ r'''
 -----------------------------------------------------------------------------------------
     setup | git-cat setuptools configuration
 
+      - python3 setup.py build    :  build everything needed to install
+      - python3 setup.py develop  :  install package in develop mode
+      - python3 setup.py doc      :  build the README and manual files
+      - python3 setup.py upload   :  upload to PyPi
+
     Copyright (C) Andrew Mathas
 
     Distributed under the terms of the GNU General Public License (GPL)
@@ -13,20 +18,22 @@ r'''
 -----------------------------------------------------------------------------------------
 '''
 
-from setuptools import setup, find_packages, Command
-import gitcat
 import os
+import gitcat
 import subprocess
+
+from setuptools import setup, find_packages, Command
 
 class Settings(dict):
     r"""
     A dummy class for reading and storing key-value pairs that are read from a file
     """
     def __init__(self, filename):
-        with open(filename,'r') as meta:
+        super().__init__()
+        with open(filename, 'r') as meta:
             for line in meta:
                 key, val = line.split('=')
-                if len(key.strip())>0:
+                if key.strip() != '':
                     setattr(self, key.strip().lower(), val.strip())
 
 settings = Settings('gitcat.ini')
@@ -39,12 +46,12 @@ class BuildDoc(Command):
     user_options = []
 
     def initialize_options(self):
-         """init options"""
-         pass
+        '''init options'''
+        pass
 
     def finalize_options(self):
-         """finalize options"""
-         pass
+        '''finalize options'''
+        pass
 
     def run(self):
         '''
@@ -54,7 +61,8 @@ class BuildDoc(Command):
         self.build_readme()
         self.build_manual()
 
-    def clean_doc_files(self):
+    @staticmethod
+    def clean_doc_files():
         '''
         remove all generated doc files
         '''
@@ -65,14 +73,19 @@ class BuildDoc(Command):
                 pass
 
     @staticmethod
-    def print_help(cmd):
+    def print_help(help):
         '''
         Print the help for this command with some formatting changes.
         Very hacky but it works...
         '''
-        help =  cmd.format_help()
-        help = help.replace('Example:', 'Example:\n\n.. code-block::\n')
-        help = help.replace('[STRATEGY]', '<STRATEGY>')
+        replacements = ['Example:', '*Example*:\n\n.. code-block:: bash\n',
+                        'Examples:', '*Examples*:\n\n.. code-block:: bash\n',
+                        '[STRATEGY]', '<STRATEGY>'
+        ]
+        rep = 0
+        while rep < len(replacements):
+            help = help.replace(replacements[rep], replacements[rep+1])
+            rep += 2
         return help
 
     def build_readme(self):
@@ -81,23 +94,25 @@ class BuildDoc(Command):
         using gitcat.py --generate_help.
         '''
         from gitcat import setup_command_line_parser, __doc__
-        doc = __doc__.split('----')
+        doc = __doc__.split('******')
         parser, commands = setup_command_line_parser()
-        with open('README.rst','w', newline='\n') as readme:
+        with open('README.rst', 'w', newline='\n') as readme:
             readme.write(doc[0]) # README header
-            readme.write(parser.format_help().replace('Commands:','Commands::\n')+'\n')
-            readme.write(doc[1]) # README blurb
+            readme.write(parser.format_help().replace('Commands:', 'Commands::\n')+'\n')
+            readme.write(self.print_help(doc[1])) # README blurb
             for cmd in commands.choices:
-                readme.write('\n**{}**\n\n'.format(cmd))
-                readme.write(self.print_help(commands.choices[cmd]))
+                readme.write('\n------------\n\n**git cat {}**\n\n'.format(cmd))
+                readme.write(self.print_help(commands.choices[cmd].format_help()))
             readme.write(doc[2]) # README end
+            readme.write('.. _`git cat`: {}'.format(settings.repository))
 
-    def build_manual(self):
+    @staticmethod
+    def build_manual():
         '''
         Build the git-cat manual from the README file
         '''
         subprocess.run('rst2html5.py README.rst README.html', shell=True)
-        subprocess.run('rst2man.py README.rst git-cat.1', shell=True)
+        subprocess.run('rst2man.py README.rst man/man1/git-cat.1', shell=True)
 
 setup(name             = settings.program,
       version          = settings.version,
@@ -110,6 +125,7 @@ setup(name             = settings.program,
       keywords         = 'git, catalogue, repositories',
 
       cmdclass         = {'doc'   : BuildDoc},
+      data_files       = [('man/man1', ['man/man1/git-cat.1'])],
 
       packages=find_packages(),
       python_requires='>=3.7',
@@ -118,7 +134,7 @@ setup(name             = settings.program,
 
       license          = settings.licence,
       classifiers      = [
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
