@@ -895,17 +895,20 @@ class GitCat:
 
         Example:
             > git cat push
-            Code/Prog1    already up to date
-            Code/Prog2    already up to date
-            Code/Prog3    already up to date
-            Code/Prog4    already up to date
+            Code/Prog1    pushed
+              To bitbucket.org:AndrewsBucket/dotfiles.git
+              refs/heads/master:refs/heads/master	e128dd9..904f96a
+              Done
+            Code/Prog2    up to date
+            Code/Prog3    up to date
+            Code/Prog4    up to date
             Code/GitCat   commit
               [master 442822d] git cat: updating   gitcat.py
               1 file changed, 44 insertions(+), 5 deletions(-)
               To bitbucket.org:AndrewsBucket/gitcat.git
               refs/heads/master:refs/heads/master	6ffeb9d..442822d
               Done
-            Notes/Life    already up to date
+            Notes/Life    up to date
 
         '''
         options = self.process_options('--porcelain --follow-tags')
