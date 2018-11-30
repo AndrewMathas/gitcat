@@ -110,17 +110,14 @@ signal.signal(signal.SIGTERM, graceful_exit)
 # ---------------------------------------------------------------------------
 # compiled regular expressions
 
-# section in an ini file
-ini_section = re.compile(r'^\[([a-zA-Z]*)\]$')
-
 # [ahead 1], or [behind 1] or [ahead # 2, behind 1] in status
 ahead_behind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
 
 # list of files that have changed
 files_changed = re.compile(r'([0-9]+ file(?:s|))(?: changed)')
 
-# remove colons around works
-colon = re.compile(r':([a-z]+):')
+# section in an ini file
+ini_section = re.compile(r'^\[([a-zA-Z]*)\]$')
 
 # ---------------------------------------------------------------------------
 # settings
@@ -723,8 +720,18 @@ class GitCat:
 
     def fetch(self):
         r'''
-        Run through all repositories and update them if their directories
-        already exist on this computer
+        Run `git fetch -q --progress` on the installed git cat repositories.
+
+        Example:
+            > git cat fetch
+            Rep1  already up to date
+            Rep2  already up to date
+            Rep3  remote: Counting objects: 3, done.
+              remote: Compressing objects:  33% (1/3)
+              remote: Compressing objects:  66% (2/3)
+              remote: Compressing objects: 100% (3/3)
+              remote: Compressing objects: 100% (3/3), done.
+              remote: Total 3 (delta 2), reused 0 (delta 0)
         '''
         # need to use -q to stop output being printed to stderr, but then we
         # have to work harder to extract information about the pull
@@ -883,6 +890,29 @@ class GitCat:
             else:
                 self.rep_message(rep, 'not on system')
 
+    def set_remote_to_ssh(self):
+        r'''
+        Make the URLs of all repositories use SSH access (rather than HHTPS).
+        This is useful because it allows password-less once the user's public
+        key has been uploaded to the remote repository.
+
+        Example:
+            > git cat remote-ssh
+        '''
+        for rep in self.repositories():
+            debugging('\nREMOTE-SSH ' + rep)
+            dire = self.expand_path(rep)
+            if self.is_git_repository(dire):
+                remote = Git(rep, 'remote', '-v')
+                if remote:
+                    if 'origin	https://' in remote.output:
+                        print('still https')
+                        pass
+            else:
+                self.rep_message(rep, 'not on system')
+
+
+
     def remove(self):
         r'''
         Remove the directory `dire` from the catalogue of repositories to
@@ -910,9 +940,8 @@ class GitCat:
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(
-                    dire, 'commit', '--all --message "{}"'.format(
-                        'Removing {} from gitcatrc'.format(dire)))
+                Git(dire, 'commit', '--all --message "{}"'.format(
+                          'Removing {} from gitcatrc'.format(dire)))
 
     def status(self):
         r'''
