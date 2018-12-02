@@ -111,6 +111,7 @@ import textwrap
 # ---------------------------------------------------------------------------
 # error messages and debugging
 
+
 def error_message(err):
     r'''
     Print error message and exit.
@@ -132,6 +133,7 @@ def graceful_exit(sig, frame):
     debugging('{}'.format(frame))
     sys.exit()
 
+
 signal.signal(signal.SIGINT, graceful_exit)
 signal.signal(signal.SIGTERM, graceful_exit)
 
@@ -145,10 +147,10 @@ ahead_behind = re.compile(r'\[((ahead|behind) [0-9]+(, )?)+\]')
 files_changed = re.compile(r'([0-9]+ file(?:s|))(?: changed)')
 
 # section in an ini file
-ini_section = re.compile(r'^\[([a-zA-Z]*)\]$')
+ini_section = re.compile(r'^\[([-a-zA-Z]*)\]$')
+
 
 # ---------------------------------------------------------------------------
-# settings
 class Settings(dict):
     r"""
     A class for reading and saving the gitcat settings and supported git
@@ -180,7 +182,7 @@ class Settings(dict):
         Return a sanitised version of the doc-string for the method `cmd` of
         `GitCat`. In particular, all code-blocks are removed.
         '''
-        return textwrap.dedent(getattr(GitCat, cmd).__doc__)
+        return textwrap.dedent(getattr(GitCat, cmd.replace('-','_')).__doc__)
 
     def add_git_options(self, commands):
         '''
@@ -236,7 +238,7 @@ class Settings(dict):
                 if key != '':
                     if '.' in key:
                         command, option = key.split('.')
-                        if not command in self.git_defaults:
+                        if command not in self.git_defaults:
                             self.git_defaults[command] = {}
                         self.git_defaults[command][option] = val
                     else:
@@ -401,9 +403,9 @@ class GitCat:
         self.gitcatrc = options.catalogue
         self.options = options
         self.prefix = options.prefix
-        self.dry_run = False
 
         for opt in ['dry_run', 'quiet']:
+            setattr(self, opt, False)
             if hasattr(options, opt):
                 setattr(self, opt, getattr(options, opt))
             if hasattr(options, 'git_'+opt):
@@ -968,8 +970,6 @@ class GitCat:
             else:
                 self.rep_message(rep, 'not on system')
 
-
-
     def remove(self):
         r'''
         Remove the current repository to the catalogue stored in the gitcatrc
@@ -989,7 +989,7 @@ class GitCat:
 
         # if possible remove the prefix from dire to set the repository
         if dire.startswith(self.prefix):
-            rep = dire[len(self.prefix)+1:] # skip over prefix + leading /
+            rep = dire[len(self.prefix)+1:]  # skip over prefix + leading /
         else:
             rep = dire
 
@@ -1024,10 +1024,12 @@ class GitCat:
             > git cat status
             Code/Prog1    up to date
             Code/Prog2    ahead 1
-            Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
-            Code/Prog4    up to date= git@bitbucket.org:AndrewsBucket/prog4.git
-            Code/GitCat   behind 1
-            Notes/Life    up to date= gitgithub.com:AndrewMathas/life.git
+            Code/Prog3    up to date
+            Code/Prog4    behind 1
+            Code/GitCat   uncommitted changes in 3 files
+              M README.rst
+              M git-options.ini
+              M gitcat.py
         '''
         status_options = self.process_options('--porcelain --short --branch')
         diff_options = '--shortstat --no-color'
@@ -1206,7 +1208,6 @@ def setup_command_line_parser():
     settings.add_git_options(commands)
     parser._optionals.title = 'Optional arguments'
     return parser, commands
-
 
 def main():
     r'''

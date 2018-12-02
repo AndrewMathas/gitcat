@@ -21,14 +21,14 @@ Optional arguments:
 Commands::
 
   add        Add current repository to the catalogue
-  branch     Print status of all branches in repository
+  branch     Print status of all branches in each repository
   commit     Commit changes in all repositories
   diff       Print a diff of the changes in each repository
   fetch      Fetch all repositories from remote repositories
   install    Install repository from the catalogue
   ls         List all repositories in the catalogue
   pull       Pull all repositories from remote repositories
-  push       Commit and push local repositories to remote repositories
+  push       Change all remote URLs to use ssh access
   remove     Remove repository from the catalogue
   status     Print the status of all repositories
 
@@ -117,7 +117,7 @@ file. An error is returned if any of the following hold:
 
 usage: git cat branch [-h] [-q] [repositories]
 
-Print status of all branches in repository
+Print status of all branches in each repository
 
 positional arguments:
   repositories  optionally filter repositories for status
@@ -242,20 +242,21 @@ optional arguments:
   -t, --tags    Fetch all tags from remote repositories
   -q, --quiet   only print "important" messages
 
-Run through all repositories and update them if their directories
-already exist on this computer
+Run `git fetch -q --progress` on the installed git cat repositories.
 
 *Example*:
 
 .. code-block:: bash
 
     > git cat fetch
-    Code/Prog1    already up to date
-    Code/Prog2    already up to date
-    Code/Prog3    already up to date
-    Code/Prog4    already up to date
-    Code/GitCat   already up to date
-    Notes/Life    already up to date
+    Rep1  already up to date
+    Rep2  already up to date
+    Rep3  remote: Counting objects: 3, done.
+      remote: Compressing objects:  33% (1/3)
+      remote: Compressing objects:  66% (2/3)
+      remote: Compressing objects: 100% (3/3)
+      remote: Compressing objects: 100% (3/3), done.
+      remote: Total 3 (delta 2), reused 0 (delta 0)
 
 ------------
 
@@ -372,7 +373,7 @@ repository.
 
 usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q] [repositories]
 
-Commit and push local repositories to remote repositories
+Change all remote URLs to use ssh access
 
 positional arguments:
   repositories   optionally filter repositories for status
@@ -396,17 +397,20 @@ each repository is printed with each push.
 .. code-block:: bash
 
     > git cat push
-    Code/Prog1    already up to date
-    Code/Prog2    already up to date
-    Code/Prog3    already up to date
-    Code/Prog4    already up to date
+    Code/Prog1    pushed
+      To bitbucket.org:AndrewsBucket/dotfiles.git
+      refs/heads/master:refs/heads/master	e128dd9..904f96a
+      Done
+    Code/Prog2    up to date
+    Code/Prog3    up to date
+    Code/Prog4    up to date
     Code/GitCat   commit
       [master 442822d] git cat: updating   gitcat.py
       1 file changed, 44 insertions(+), 5 deletions(-)
       To bitbucket.org:AndrewsBucket/gitcat.git
       refs/heads/master:refs/heads/master	6ffeb9d..442822d
       Done
-    Notes/Life    already up to date
+    Notes/Life    up to date
 
 ------------
 
