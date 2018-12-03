@@ -47,7 +47,8 @@ class BuildDoc(Command):
 
     def initialize_options(self):
         '''init options'''
-        pass
+        if not os.path.exists('man/man1'):
+            os.makedirs('man/man1')
 
     def finalize_options(self):
         '''finalize options'''

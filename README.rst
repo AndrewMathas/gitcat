@@ -20,17 +20,18 @@ Optional arguments:
 
 Commands::
 
-  add        Add current repository to the catalogue
-  branch     Print status of all branches in each repository
-  commit     Commit changes in all repositories
-  diff       Print a diff of the changes in each repository
-  fetch      Fetch all repositories from remote repositories
-  install    Install repository from the catalogue
-  ls         List all repositories in the catalogue
-  pull       Pull all repositories from remote repositories
-  push       Change all remote URLs to use ssh access
-  remove     Remove repository from the catalogue
-  status     Print the status of all repositories
+  add                  Add current repository to the catalogue
+  branch               Print status of all branches in each repository
+  commit               Commit changes in all repositories
+  diff                 Print a diff of the changes in each repository
+  fetch                Fetch all repositories from remote repositories
+  install              Install repository from the catalogue
+  ls                   List all repositories in the catalogue
+  pull                 Pull all repositories from remote repositories
+  push                 Commit and push local repositories to remote repositories
+  set-remote-to-ssh    Change all remote URLs to use ssh access
+  remove               Remove repository from the catalogue
+  status               Print the status of all repositories
 
 
 
@@ -373,7 +374,7 @@ repository.
 
 usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q] [repositories]
 
-Change all remote URLs to use ssh access
+Commit and push local repositories to remote repositories
 
 positional arguments:
   repositories   optionally filter repositories for status
@@ -411,6 +412,31 @@ each repository is printed with each push.
       refs/heads/master:refs/heads/master	6ffeb9d..442822d
       Done
     Notes/Life    up to date
+
+------------
+
+**git cat set-remote-to-ssh**
+
+usage: git cat set-remote-to-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-ssh
 
 ------------
 
@@ -469,10 +495,12 @@ behind the remote repository.
     > git cat status
     Code/Prog1    up to date
     Code/Prog2    ahead 1
-    Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
-    Code/Prog4    up to date= git@bitbucket.org:AndrewsBucket/prog4.git
-    Code/GitCat   behind 1
-    Notes/Life    up to date= gitgithub.com:AndrewMathas/life.git
+    Code/Prog3    up to date
+    Code/Prog4    behind 1
+    Code/GitCat   uncommitted changes in 3 files
+      M README.rst
+      M git-options.ini
+      M gitcat.py
 
 
 Author
