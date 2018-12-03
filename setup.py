@@ -67,7 +67,7 @@ class BuildDoc(Command):
         '''
         remove all generated doc files
         '''
-        for doc in ['README.rst', 'README.html', 'git-cat.1']:
+        for doc in ['README.rst', 'README.html', 'man/man1/git-cat.1']:
             try:
                 os.remove(doc)
             except FileNotFoundError:

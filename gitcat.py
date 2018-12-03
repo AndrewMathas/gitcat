@@ -83,6 +83,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 .. _Python: https://www.python.org/
 '''
 
+# flag to enable argparse autocmpletion if argcomplete is installed
+# PYTHON_ARGCOMPLETE_OK
+
 # ---------------------------------------------------------------------------
 # TODO:
 #  - debugging and testing...
@@ -107,6 +110,11 @@ import signal
 import subprocess
 import sys
 import textwrap
+
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = False
 
 # ---------------------------------------------------------------------------
 # error messages and debugging
@@ -1214,6 +1222,8 @@ def main():
     Parse command line options and then run git cat
     '''
     parser, commands = setup_command_line_parser()
+    if argcomplete:
+        argcomplete.autocomplete(parser)
     options = parser.parse_args()
     settings.DEBUGGING = options.debugging
 
