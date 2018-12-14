@@ -20,18 +20,18 @@ Optional arguments:
 
 Commands::
 
-  add                  Add current repository to the catalogue
-  branch               Print status of all branches in each repository
-  commit               Commit changes in all repositories
-  diff                 Print a diff of the changes in each repository
-  fetch                Fetch all repositories from remote repositories
-  install              Install repository from the catalogue
-  ls                   List all repositories in the catalogue
-  pull                 Pull all repositories from remote repositories
-  push                 Commit and push local repositories to remote repositories
-  set-remote-to-ssh    Change all remote URLs to use ssh access
-  remove               Remove repository from the catalogue
-  status               Print the status of all repositories
+  add               Add current repository to the catalogue
+  branch            Print status of all branches in each repository
+  commit            Commit changes in all repositories
+  diff              Print a diff of the changes in each repository
+  fetch             Fetch all repositories from remote repositories
+  install           Install repository from the catalogue
+  ls                List all repositories in the catalogue
+  pull              Pull all repositories from remote repositories
+  push              Commit and push local repositories to remote repositories
+  remote-set-ssh    Change all remote URLs to use ssh access
+  remove            Remove repository from the catalogue
+  status            Print the status of all repositories
 
 
 
@@ -136,17 +136,17 @@ repositories managed by git cat.
 .. code-block:: bash
 
     > git cat branch Code
-    Code/Prog1
+    Code/Project1
       python3 6c2fcd5 Putting out the washing
-    Code/Prog2
+    Code/Project2
       master  2d2614e [ahead 1] Making some important changes
-    Code/Prog3        already up to date
-    Code/Prog4        already up to date
-    Code/Prog5
+    Code/Project3        already up to date
+    Code/Project4        already up to date
+    Code/Project5
       branch1 14fc541 Adding braid method to tableau
       * branch2       68480a4 git cat: updating   doc/README.rst
       master             862e2f4 Adding good stuff
-    Code/Prog6            already up to date
+    Code/Project6            already up to date
 
 ------------
 
@@ -209,9 +209,9 @@ catalogue.
 
 
     > git cat diff Code
-    Code/Prog1   up to date
-    Code/Prog2   up to date
-    Code/GitCat  diff --git c/gitcat.py w/gitcat.py
+    Code/Project1  up to date
+    Code/Project2  up to date
+    Code/GitCat    diff --git c/gitcat.py w/gitcat.py
     index b32a07f..c32a435 100644
     --- c/gitcat.py
     +++ w/gitcat.py
@@ -315,13 +315,13 @@ their remote repository.
 .. code-block:: bash
 
     > git cat ls
-    Code/Prog1    = git@bitbucket.org:AndrewsBucket/prog1.git
-    Code/Prog2    = git@bitbucket.org:AndrewsBucket/prog2.git
-    Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
-    Code/Prog4    = git@bitbucket.org:AndrewsBucket/prog4.git
-    Code/GitCat   = git@gitgithub.com:AndrewMathas/gitcat.git
-    Notes/Life    = git@gitgithub.com:AndrewMathas/life.git
-    Stuff         = git@some.random.rep.com:Me/stuffing.git
+    Code/Project1  = git@bitbucket.org:AndrewsBucket/prog1.git
+    Code/Project2  = git@bitbucket.org:AndrewsBucket/prog2.git
+    Code/Project3  = git@bitbucket.org:AndrewsBucket/prog3.git
+    Code/Project4  = git@bitbucket.org:AndrewsBucket/prog4.git
+    Code/GitCat    = git@gitgithub.com:AndrewMathas/gitcat.git
+    Notes/Life     = git@gitgithub.com:AndrewMathas/life.git
+    Stuff          = git@some.random.rep.com:Me/stuffing.git
 
 ------------
 
@@ -361,12 +361,12 @@ repository.
 .. code-block:: bash
 
     > git cat pull
-    Code/Prog1    already up to date
-    Code/Prog2    already up to date
-    Code/GitCat   already up to date
+    Code/Project1  already up to date
+    Code/Project2  already up to date
+    Code/GitCat    already up to date
       remote: Counting objects: 8, done.
       remote: Total 8 (delta 6), reused 0 (delta 0)
-    Notes/Life    already up to date
+    Notes/Life     already up to date
 
 ------------
 
@@ -398,26 +398,26 @@ each repository is printed with each push.
 .. code-block:: bash
 
     > git cat push
-    Code/Prog1    pushed
+    Code/Project1  pushed
       To bitbucket.org:AndrewsBucket/dotfiles.git
       refs/heads/master:refs/heads/master	e128dd9..904f96a
       Done
-    Code/Prog2    up to date
-    Code/Prog3    up to date
-    Code/Prog4    up to date
-    Code/GitCat   commit
+    Code/Project2  up to date
+    Code/Project3  up to date
+    Code/Project4  up to date
+    Code/GitCat    commit
       [master 442822d] git cat: updating   gitcat.py
       1 file changed, 44 insertions(+), 5 deletions(-)
       To bitbucket.org:AndrewsBucket/gitcat.git
       refs/heads/master:refs/heads/master	6ffeb9d..442822d
       Done
-    Notes/Life    up to date
+    Notes/Life     up to date
 
 ------------
 
-**git cat set-remote-to-ssh**
+**git cat remote-set-ssh**
 
-usage: git cat set-remote-to-ssh [-h] [-q] [repositories]
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
 
 Change all remote URLs to use ssh access
 
@@ -432,11 +432,22 @@ Make the URLs of all repositories use SSH access (rather than HHTPS).
 This is useful because it allows password-less once the user's public
 key has been uploaded to the remote repository.
 
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
 *Example*:
 
 .. code-block:: bash
 
-    > git cat remote-ssh
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
 
 ------------
 
@@ -492,12 +503,12 @@ behind the remote repository.
 
 .. code-block:: bash
 
-    > git cat status
-    Code/Prog1    up to date
-    Code/Prog2    ahead 1
-    Code/Prog3    up to date
-    Code/Prog4    behind 1
-    Code/GitCat   uncommitted changes in 3 files
+    > git cat status Code
+    Code/Project1  up to date
+    Code/Project2  ahead 1
+    Code/Project3  up to date
+    Code/Project4  behind 1
+    Code/GitCat    uncommitted changes in 3 files
       M README.rst
       M git-options.ini
       M gitcat.py
@@ -511,6 +522,8 @@ Andrew Mathas
 `git cat` Version 1.0
 
 Copyright (C) 2018
+
+------------
 
 GNU General Public License, Version 3, 29 June 2007
 

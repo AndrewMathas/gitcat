@@ -66,6 +66,8 @@ Andrew Mathas
 
 Copyright (C) 2018
 
+------------
+
 GNU General Public License, Version 3, 29 June 2007
 
 This program is free software: you can redistribute it and/or modify it under
@@ -422,8 +424,9 @@ class GitCat:
         # read the catalogue from the rc file
         self.read_catalogue()
 
-        # run corresponding command
-        getattr(self, options.command)()
+        # run corresponding command - but allow shorthands
+        command = options.command.replace('-','_')
+        getattr(self, command)()
 
     @staticmethod
     def changed_files(rep):
@@ -682,17 +685,17 @@ class GitCat:
 
         Example:
             > git cat branch Code
-            Code/Prog1
+            Code/Project1
               python3 6c2fcd5 Putting out the washing
-            Code/Prog2
+            Code/Project2
               master  2d2614e [ahead 1] Making some important changes
-            Code/Prog3        already up to date
-            Code/Prog4        already up to date
-            Code/Prog5
+            Code/Project3        already up to date
+            Code/Project4        already up to date
+            Code/Project5
               branch1 14fc541 Adding braid method to tableau
               * branch2       68480a4 git cat: updating   doc/README.rst
               master             862e2f4 Adding good stuff
-            Code/Prog6            already up to date
+            Code/Project6            already up to date
 
         '''
         # need to use -q to stop output being printed to stderr, but then we
@@ -719,13 +722,13 @@ class GitCat:
 
         Example:
             > git cat ls
-            Code/Prog1    = git@bitbucket.org:AndrewsBucket/prog1.git
-            Code/Prog2    = git@bitbucket.org:AndrewsBucket/prog2.git
-            Code/Prog3    = git@bitbucket.org:AndrewsBucket/prog3.git
-            Code/Prog4    = git@bitbucket.org:AndrewsBucket/prog4.git
-            Code/GitCat   = git@gitgithub.com:AndrewMathas/gitcat.git
-            Notes/Life    = git@gitgithub.com:AndrewMathas/life.git
-            Stuff         = git@some.random.rep.com:Me/stuffing.git
+            Code/Project1  = git@bitbucket.org:AndrewsBucket/prog1.git
+            Code/Project2  = git@bitbucket.org:AndrewsBucket/prog2.git
+            Code/Project3  = git@bitbucket.org:AndrewsBucket/prog3.git
+            Code/Project4  = git@bitbucket.org:AndrewsBucket/prog4.git
+            Code/GitCat    = git@gitgithub.com:AndrewMathas/gitcat.git
+            Notes/Life     = git@gitgithub.com:AndrewMathas/life.git
+            Stuff          = git@some.random.rep.com:Me/stuffing.git
 
         '''
         print(self.list_catalogue(listing=False))
@@ -754,9 +757,9 @@ class GitCat:
         Example:
 
             > git cat diff Code
-            Code/Prog1   up to date
-            Code/Prog2   up to date
-            Code/GitCat  diff --git c/gitcat.py w/gitcat.py
+            Code/Project1  up to date
+            Code/Project2  up to date
+            Code/GitCat    diff --git c/gitcat.py w/gitcat.py
             index b32a07f..c32a435 100644
             --- c/gitcat.py
             +++ w/gitcat.py
@@ -865,12 +868,12 @@ class GitCat:
 
         Example:
             > git cat pull
-            Code/Prog1    already up to date
-            Code/Prog2    already up to date
-            Code/GitCat   already up to date
+            Code/Project1  already up to date
+            Code/Project2  already up to date
+            Code/GitCat    already up to date
               remote: Counting objects: 8, done.
               remote: Total 8 (delta 6), reused 0 (delta 0)
-            Notes/Life    already up to date
+            Notes/Life     already up to date
 
         '''
         # need to use -q to stop output being printed to stderr, but then we
@@ -904,20 +907,20 @@ class GitCat:
 
         Example:
             > git cat push
-            Code/Prog1    pushed
+            Code/Project1  pushed
               To bitbucket.org:AndrewsBucket/dotfiles.git
               refs/heads/master:refs/heads/master	e128dd9..904f96a
               Done
-            Code/Prog2    up to date
-            Code/Prog3    up to date
-            Code/Prog4    up to date
-            Code/GitCat   commit
+            Code/Project2  up to date
+            Code/Project3  up to date
+            Code/Project4  up to date
+            Code/GitCat    commit
               [master 442822d] git cat: updating   gitcat.py
               1 file changed, 44 insertions(+), 5 deletions(-)
               To bitbucket.org:AndrewsBucket/gitcat.git
               refs/heads/master:refs/heads/master	6ffeb9d..442822d
               Done
-            Notes/Life    up to date
+            Notes/Life     up to date
 
         '''
         options = self.process_options('--porcelain --follow-tags')
@@ -957,24 +960,49 @@ class GitCat:
             else:
                 self.rep_message(rep, 'not on system')
 
-    def set_remote_to_ssh(self):
+    def remote_set_ssh(self):
         r'''
         Make the URLs of all repositories use SSH access (rather than HHTPS).
         This is useful because it allows password-less once the user's public
         key has been uploaded to the remote repository.
 
+        This involves changing the remote URL from something like:
+
+            https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+        to:
+
+            git@bitbucket.org:AndrewsBucket/webquiz.git
+
         Example:
-            > git cat remote-ssh
+            > git cat remote-set-ssh
+            Code/Project1  unchanged
+            Code/Project2  changed to ssh access
+            Code/Project3  unchanged
         '''
         for rep in self.repositories():
-            debugging('\nREMOTE-SSH ' + rep)
+            debugging('\nCONVERT-TO-SSH ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
                 remote = Git(rep, 'remote', '-v')
+                changed = [] # avoid duplicates by keeping a list of remotes that have already been changed
                 if remote:
-                    if 'origin	https://' in remote.output:
-                        print('still https')
-                        pass
+                    if 'https://' in remote.output:
+                        # remotes will be repeating triples that look something like:
+                        # 'origin', 'https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git', '(fetch)'
+                        remotes = remote.output.split()
+                        r=0
+                        while r+1<len(remotes):
+                            https = remotes[r+1] # a https string as above
+                            if remotes[r] not in changed and '@' in https:
+                                ssh = 'git'+https[https.index('@'):].replace('/',':',1)
+                                changing = Git(rep, 'remote', 'set-url {} {}'.format(remotes[r], ssh))
+                                if changing:
+                                    self.rep_message(rep, 'changed to ssh access')
+                                    changed.append(remotes[r])
+                            r += 3
+                    else:
+                        self.rep_message(rep, 'unchanged')
             else:
                 self.rep_message(rep, 'not on system')
 
@@ -1029,12 +1057,12 @@ class GitCat:
         behind the remote repository.
 
         Example:
-            > git cat status
-            Code/Prog1    up to date
-            Code/Prog2    ahead 1
-            Code/Prog3    up to date
-            Code/Prog4    behind 1
-            Code/GitCat   uncommitted changes in 3 files
+            > git cat status Code
+            Code/Project1  up to date
+            Code/Project2  ahead 1
+            Code/Project3  up to date
+            Code/Project4  behind 1
+            Code/GitCat    uncommitted changes in 3 files
               M README.rst
               M git-options.ini
               M gitcat.py
