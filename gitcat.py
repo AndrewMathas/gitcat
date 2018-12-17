@@ -111,39 +111,12 @@ import subprocess
 import sys
 import textwrap
 
+from difflib import get_close_matches
+
 try:
     import argcomplete
 except ImportError:
     argcomplete = False
-
-# ---------------------------------------------------------------------------
-# error messages and debugging
-
-
-def error_message(err):
-    r'''
-    Print error message and exit.
-    '''
-    print('git cat error: {}'.format(err))
-    sys.exit(1)
-
-
-def debugging(message):
-    """ print a debugging message if `debugging` is true"""
-    if settings.DEBUGGING:
-        print(message)
-
-
-# ---------------------------------------------------------------------------
-def graceful_exit(sig, frame):
-    ''' exit gracefully on SIGINT and SIGTERM '''
-    print('program terminated (signal {})'.format(sig))
-    debugging('{}'.format(frame))
-    sys.exit()
-
-
-signal.signal(signal.SIGINT, graceful_exit)
-signal.signal(signal.SIGTERM, graceful_exit)
 
 # ---------------------------------------------------------------------------
 # compiled regular expressions
@@ -169,9 +142,8 @@ class Settings(dict):
     def __init__(self, ini_file, git_options_file):
         super().__init__()
 
-        self.git_defaults = {}  # will hold non-standard git defaults
         self.prefix = os.environ['HOME']
-        self.quiet = False
+        self.quiet = False      # defaults
         self.dry_run = False
 
         # location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc
@@ -181,8 +153,19 @@ class Settings(dict):
         if not os.path.isfile(self.rc_file):
             self.rc_file = os.path.expanduser('~/.gitcatrc')
 
+        # read gitcat ini file, which gives data about gitcat
         self.read_ini_file(ini_file)
+
+        self.commands = {}
         self.read_git_options(git_options_file)
+
+        # save the default options
+        self.default_options = {}  # will hold non-standard git defaults
+        for cmd in self.commands:
+            self.default_options[cmd] = {}
+            for option in self.commands[cmd]:
+                if 'default' in self.commands[cmd][option]:
+                    self.default_options[cmd][option] = self.commands[cmd][option]['default']
 
     @staticmethod
     def doc_string(cmd):
@@ -256,7 +239,6 @@ class Settings(dict):
         '''
         Read and store the information in the command-line options file
         '''
-        self.commands = {}
         with open(options_file, 'r') as options:
             for line in options:
                 match = ini_section.search(line.strip())
@@ -284,8 +266,7 @@ class Settings(dict):
                         except (NameError, SyntaxError, TypeError):
                             option['default'] = default.strip()
                         if isinstance(option['default'], bool):
-                            option['action'] = 'store_{}'.format(
-                                str(not option['default']).lower())
+                            option['action'] = 'store_{}'.format(str(not option['default']).lower())
                         if isinstance(option['default'], str):
                             option['type'] = str
 
@@ -313,7 +294,10 @@ class Settings(dict):
         save_settings = ''
         if self.prefix != os.environ['HOME']:
             save_settings += 'prefix = {}\n'.format(self.prefix)
-        return save_settings
+
+        if save_settings !='':
+            return '\n'+save_settings+'\n'
+        return ''
 
     def version(self):
         """ return gitcat version """
@@ -323,6 +307,33 @@ class Settings(dict):
 file = lambda f: os.path.join(os.path.dirname(__file__), f)
 settings = Settings(file('gitcat.ini'), file('git-options.ini'))
 
+
+# ---------------------------------------------------------------------------
+# error messages and debugging
+def error_message(err):
+    r'''
+    Print error message and exit.
+    '''
+    print('git cat error: {}'.format(err))
+    sys.exit(1)
+
+
+def debugging(message):
+    """ print a debugging message if `debugging` is true"""
+    if settings.DEBUGGING:
+        print(message)
+
+
+# ---------------------------------------------------------------------------
+def graceful_exit(sig, frame):
+    ''' exit gracefully on SIGINT and SIGTERM '''
+    print('program terminated (signal {})'.format(sig))
+    debugging('{}'.format(frame))
+    sys.exit()
+
+
+signal.signal(signal.SIGINT, graceful_exit)
+signal.signal(signal.SIGTERM, graceful_exit)
 
 # ---------------------------------------------------------------------------
 # running git commands using subprocess
@@ -395,7 +406,7 @@ class Git:
 # ---------------------------------------------------------------------------
 class GitCat:
     r"""
-    Usage: GitCat(options)
+    Usage: GitCat(options, settings)
 
     A class for reading, accessing and storing details of the different git
     repositories. These are stored in `filename` in the form:
@@ -407,13 +418,13 @@ class GitCat:
     Any lines without a key-value pair are ignored.
     """
 
-    def __init__(self, options):
+    def __init__(self, options, settings):
         self.gitcatrc = options.catalogue
         self.options = options
         self.prefix = options.prefix
 
         for opt in ['dry_run', 'quiet']:
-            setattr(self, opt, False)
+            setattr(self, opt, getattr(settings, opt))
             if hasattr(options, opt):
                 setattr(self, opt, getattr(options, opt))
             if hasattr(options, 'git_'+opt):
@@ -443,10 +454,10 @@ class GitCat:
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.output != '':
             commit_message = 'git cat: updating ' + changed_files.output
-            commit = '--all --message="{}"'.format(commit_message)
+            options = '--all --porcelain --message="{}"'.format(commit_message)
             if self.dry_run:
-                commit += ' --porcelain'
-            return Git(rep, 'commit', commit)
+                options += ' --dry-run'
+            return Git(rep, 'commit', options)
 
         return changed_files
 
@@ -520,22 +531,34 @@ class GitCat:
         '''
         self.catalogue = {}
         try:
+            reading_settings = True
             with open(self.gitcatrc, 'r') as catalogue:
                 for line in catalogue:
+                    if line.strip() == 'Catalogue:':
+                        reading_settings = False
+
                     if ' = ' in line:
                         dire, rep = line.split(' = ')
                         dire = dire.strip()
-                        if dire in self.catalogue:
-                            error_message(
-                                '{} appears in the catalogue more than once!'.
-                                format(dire))
-                        elif dire.lower == 'prefix':
-                            self.prefix = rep.strip()
+                        rep = rep.strip()
+                        if reading_settings:
+                            if hasattr(self, dire):
+                                setattr(self, dire, rep)
+                            elif hasattr(self.options, dire):
+                                setattr(self.options, dire, rep)
+                            else:
+                                self.message('bad setting "{}" in gitcatrc file'.format(dire))
+
                         else:
-                            self.catalogue[dire] = rep.strip()
+                            if dire in self.catalogue:
+                                error_message(
+                                    '{} appears in the catalogue more than once!'.
+                                    format(dire))
+                            else:
+                                self.catalogue[dire] = rep.strip()
+
         except (FileNotFoundError, OSError):
-            error_message(
-                'there was a problem reading the catalogue file {}'.format(
+            error_message('there was a problem reading the catalogue file {}'.format(
                     self.gitcatrc))
 
         # set the maximum length of a catalogue key
@@ -549,10 +572,10 @@ class GitCat:
         Save the catalogue of git repositories to sync
         '''
         with open(self.gitcatrc, 'w') as catalogue:
-            catalogue.write(
-                '# List of git repositories to sync using gitcat\n\n')
+            catalogue.write('# List of git repositories to sync using gitcat\n')
+            catalogue.write('# Do not remove the "Catalogue:" line below!\n')
             catalogue.write(settings.save_settings())
-            catalogue.write(self.list_catalogue(listing=True) + '\n')
+            catalogue.write('Catalogue:\n'+self.list_catalogue(listing=True) + '\n')
 
     def short_path(self, dire):
         r'''
@@ -835,8 +858,7 @@ class GitCat:
                 else:
                     # initialise current repository and fetch from remote
                     Git(rep, 'init')
-                    Git(rep,
-                        'remote add origin {}'.format(self.catalogue[rep]))
+                    Git(rep, 'remote add origin {}'.format(self.catalogue[rep]))
                     Git(rep, 'fetch origin')
                     Git(rep, 'checkout -b master --track origin/master')
 
@@ -920,6 +942,7 @@ class GitCat:
             Notes/Life    up to date
 
         '''
+        debugging('\nPUSHING ')
         options = self.process_options('--porcelain --follow-tags')
         for rep in self.repositories():
             debugging('\nPUSHING ' + rep)
@@ -1096,6 +1119,27 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
     Override help formatter so that we can print a list of the possible
     commands together with a quick summary of them
     '''
+    def _check_value(self, action, value):
+        """
+        It's probably not a great idea to override a "hidden" method
+        but the default behavior is pretty ugly and there doesn't
+        seem to be any other way to change it.
+        """
+        # converted value must be one of the choices (if specified)
+        if action.choices is not None and value not in action.choices:
+            msg = ['Invalid choice, valid choices are:\n']
+            for i in range(len(action.choices))[::self.ChoicesPerLine]:
+                current = []
+                for choice in action.choices[i:i+self.ChoicesPerLine]:
+                    current.append('%-40s' % choice)
+                msg.append(' | '.join(current))
+            possible = get_close_matches(value, action.choices, cutoff=0.8)
+            if possible:
+                extra = ['\n\nInvalid choice: %r, maybe you meant:\n' % value]
+                for word in possible:
+                    extra.append('  * %s' % word)
+                msg.extend(extra)
+            raise argparse.ArgumentError(action, '\n'.join(msg)) 
 
     def _format_action(self, action):
         if isinstance(action, argparse._SubParsersAction):
@@ -1142,15 +1186,12 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
 
 
 # ---------------------------------------------------------------------------
-def setup_command_line_parser():
+def setup_command_line_parser(settings):
     '''
     Return parsers for the command line options and the commands.
     The function is used to parse the command-line options an to automatically
     generate the documentation from setup.py
     '''
-    # allow the command line options to change the DEBUGGING flag
-    global settings
-
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
         add_help=False,
@@ -1221,7 +1262,7 @@ def main():
     r'''
     Parse command line options and then run git cat
     '''
-    parser, commands = setup_command_line_parser()
+    parser, commands = setup_command_line_parser(settings)
     if argcomplete:
         argcomplete.autocomplete(parser)
     options = parser.parse_args()
@@ -1249,7 +1290,7 @@ def main():
 
 
 
-    GitCat(options)
+    GitCat(options, settings)
 
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
