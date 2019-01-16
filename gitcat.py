@@ -946,7 +946,7 @@ class GitCat:
 
         '''
         debugging('\nPUSHING ')
-        options = self.process_options('--porcelain --follow-tags')
+        options = self.process_options('--follow-tags')
         for rep in self.repositories():
             debugging('\nPUSHING ' + rep)
             dire = self.expand_path(rep)
@@ -956,7 +956,7 @@ class GitCat:
                 if commit:
                     if commit.output != '':
                         self.rep_message(rep, 'commit\n' + commit.output)
-                    push = Git(rep, 'push', options + ' --dry-run')
+                    push = Git(rep, 'push', options + ' --porcelain')
                     if push:
                         if '[up to date]' in push.output:
                             self.rep_message(rep, 'up to date')
@@ -964,9 +964,7 @@ class GitCat:
                             push = Git(rep, 'push', options)
 
                             if push:
-                                if push.output.startswith(
-                                        '  To ') and push.output.endswith(
-                                            'Done'):
+                                if push.output.startswith('  To ') and push.output.endswith('Done'):
                                     if commit.output == '' and 'up to date' not in commit.output:
                                         self.rep_message(
                                             rep, 'pushed\n' + push.output)
