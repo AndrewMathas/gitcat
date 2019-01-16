@@ -457,9 +457,9 @@ class GitCat:
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.output != '':
             commit_message = 'git cat: updating ' + changed_files.output
-            options = '--all --porcelain --message="{}"'.format(commit_message)
+            options = '--all --message="{}"'.format(commit_message)
             if self.dry_run:
-                options += ' --dry-run'
+                options += ' --porcelain' # implies --dry-run
             return Git(rep, 'commit', options)
 
         return changed_files
@@ -946,7 +946,7 @@ class GitCat:
 
         '''
         debugging('\nPUSHING ')
-        options = self.process_options('--follow-tags')
+        options = self.process_options('--porcelain --follow-tags')
         for rep in self.repositories():
             debugging('\nPUSHING ' + rep)
             dire = self.expand_path(rep)
@@ -956,7 +956,7 @@ class GitCat:
                 if commit:
                     if commit.output != '':
                         self.rep_message(rep, 'commit\n' + commit.output)
-                    push = Git(rep, 'push', options + ' --porcelain')
+                    push = Git(rep, 'push', options + ' --dry-run')
                     if push:
                         if '[up to date]' in push.output:
                             self.rep_message(rep, 'up to date')
