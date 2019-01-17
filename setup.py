@@ -94,9 +94,9 @@ class BuildDoc(Command):
         Construct the README.rst file from the files in the doc directory and
         using gitcat.py --generate_help.
         '''
-        from gitcat import setup_command_line_parser, __doc__
+        from gitcat import setup_command_line_parser, __doc__, settings as gitcat_settings
         doc = __doc__.split('******')
-        parser, commands = setup_command_line_parser()
+        parser, commands = setup_command_line_parser(gitcat_settings)
         with open('README.rst', 'w', newline='\n') as readme:
             readme.write(doc[0]) # README header
             readme.write(parser.format_help().replace('Commands:', 'Commands::\n')+'\n')

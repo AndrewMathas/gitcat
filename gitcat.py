@@ -91,9 +91,6 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 # ---------------------------------------------------------------------------
 # TODO:
 #  - debugging and testing...
-#  - make "git cat git" command work
-#  - make "git cat pull" first update the repository containing the gitcatrc file and
-#     then reread it ??wanted??
 #  - add a "git cat --set-as-defaults cmd [options]" option to set defaults
 #     for a given command and then store the information into the gitcatrc
 #     file. Will need to be clever to avoid code duplication...possibly add all
@@ -103,6 +100,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - make status check that changes have been pushed
 #  - add a fast option
 #  - add exclude option
+#  - use parallel processing
+#  - ? add a "git cat git"
+#  - ? make "git cat pull" first update the repository containing the gitcatrc file and
+#     then reread it
 
 import argparse
 import os
@@ -152,7 +153,7 @@ class Settings(dict):
         # and then to ~/.gitcatrc
         if os.path.isdir(os.path.expanduser('~/.dotfiles/config')):
             self.rc_file = os.path.expanduser('~/.dotfiles/config/gitcatrc')
-        if not os.path.isfile(self.rc_file):
+        if not (os.path.isfile(self.rc_file) or hasattr(self, 'rc_file')):
             self.rc_file = os.path.expanduser('~/.gitcatrc')
 
         # read gitcat ini file, which gives data about gitcat
