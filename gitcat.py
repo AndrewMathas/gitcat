@@ -101,9 +101,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - add a fast option
 #  - add exclude option
 #  - use parallel processing
-#  - ? add a "git cat git"
+#  - ? add a "git cat git" command?
 #  - ? make "git cat pull" first update the repository containing the gitcatrc file and
-#     then reread it
+#     then reread it?
 
 import argparse
 import os
