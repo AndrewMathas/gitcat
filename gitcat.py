@@ -1051,8 +1051,25 @@ class GitCat:
         else:
             rep = dire
 
+        debugging('dire is {}, rep is {}.'.format(dire, rep))
         if not (rep in self.catalogue and self.is_git_repository(dire)):
             error_message('unknown repository {}'.format(dire))
+
+        # find the root directory for the repository and the remote URL`
+        os.chdir(dire)
+        root = Git(dire, 'root')
+        if not root:
+            error_message('{} is not a git repository:\n  {}'.format(
+                dire, root.output))
+
+        rep = Git(dire, 'remote', 'get-url --push origin')
+        if not rep:
+            error_message(
+                'Unable to find remote repository for {}'.format(dire)
+            )
+
+        dire = self.short_path(root.output.strip())
+        rep = rep.output.strip()
 
         del self.catalogue[rep]
         self.message('Removing {} from the catalogue'.format(dire))
