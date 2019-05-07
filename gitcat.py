@@ -957,9 +957,9 @@ class GitCat:
                 if commit:
                     if commit.output != '':
                         self.rep_message(rep, 'commit\n' + commit.output)
-                    push = Git(rep, 'push', options + ' --dry-run')
-                    if push:
-                        if '[up to date]' in push.output:
+                    ahead = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
+                    if ahead:
+                        if 'ahead' not in ahead.output:
                             self.rep_message(rep, 'up to date')
                         elif not self.dry_run:
                             push = Git(rep, 'push', options)
