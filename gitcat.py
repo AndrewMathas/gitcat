@@ -101,7 +101,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - add a fast option
 #  - add exclude option
 #  - use parallel processing
-#  - ? add a "git cat git"
+#  - ? add a "git cat git" command
 #  - ? make "git cat pull" first update the repository containing the gitcatrc file and
 #     then reread it
 
@@ -436,9 +436,12 @@ class GitCat:
         # read the catalogue from the rc file
         self.read_catalogue()
 
-        # run corresponding command - but allow shorthands
-        command = options.command.replace('-','_')
-        getattr(self, command)()
+        if options.moveto > 0:
+            self.move_to(opions.moveto)
+        else:
+            # run corresponding command - but allow shorthands
+            command = options.command.replace('-','_')
+            getattr(self, command)()
 
     @staticmethod
     def changed_files(rep):
@@ -472,6 +475,28 @@ class GitCat:
         '''
         return dire if dire.startswith('/') else os.path.join(self.prefix, dire)
 
+    def get_current_git_root(self):
+        r'''
+        Return the root directory of the git repository that contains the
+        current working directory.
+        '''
+        if self.options.git_directory is None:
+            dire = self.short_path(os.getcwd())
+        else:
+            dire = self.short_path(os.path.expanduser(self.options.repository))
+        dire = self.expand_path(dire)
+
+        if not (os.path.isdir(dire) and self.is_git_repository(dire)):
+            error_message('{} not a git repository'.format(dire))
+
+        # find the root directory for the repository and the remote URL`
+        os.chdir(dire)
+        root = Git(dire, 'root')
+        if not root:
+            error_message('{} is not a git repository:\n  {}'.format(
+                dire, root.output))
+        return root
+
     def is_git_repository(self, dire):
         r'''
         Return `True` if `dire` is a git repository and `False` otherwise. As
@@ -499,6 +524,12 @@ class GitCat:
             sep='=' if listing or self.
             is_git_repository(self.expand_path(dire)) else '!',
             max=self.max) for dire in self.repositories())
+
+    def move_to(self, position):
+        r'''
+        Move current repository to position `moveto` in the catalogue
+        '''
+        pass
 
     def process_options(self, default_options=''):
         r'''
@@ -658,27 +689,11 @@ class GitCat:
         Example:
             > git cat add  # add the current directory to the catalogue
         '''
-        if self.options.git_directory is None:
-            dire = self.short_path(os.getcwd())
-        else:
-            dire = self.short_path(os.path.expanduser(self.options.repository))
-        dire = self.expand_path(dire)
-
-        if not (os.path.isdir(dire) and self.is_git_repository(dire)):
-            error_message('{} not a git repository'.format(dire))
-
-        # find the root directory for the repository and the remote URL`
-        os.chdir(dire)
-        root = Git(dire, 'root')
-        if not root:
-            error_message('{} is not a git repository:\n  {}'.format(
-                dire, root.output))
+        dire = self.get_current_git_root()
 
         rep = Git(dire, 'remote', 'get-url --push origin')
         if not rep:
-            error_message(
-                'Unable to find remote repository for {}'.format(dire)
-            )
+            error_message('Unable to find remote repository for {}'.format(dire))
 
         dire = self.short_path(root.output.strip())
         rep = rep.output.strip()
@@ -1039,11 +1054,7 @@ class GitCat:
             git cat remove  # remove the current directory to the catalogue
 
         '''
-        if self.options.git_directory is None:
-            dire = self.short_path(os.getcwd())
-        else:
-            dire = self.short_path(os.path.expanduser(self.options.repository))
-        dire = self.expand_path(dire)
+        dire = self.get_current_git_root()
 
         # if possible remove the prefix from dire to set the repository
         if dire.startswith(self.prefix):
@@ -1051,25 +1062,8 @@ class GitCat:
         else:
             rep = dire
 
-        debugging('dire is {}, rep is {}.'.format(dire, rep))
         if not (rep in self.catalogue and self.is_git_repository(dire)):
             error_message('unknown repository {}'.format(dire))
-
-        # find the root directory for the repository and the remote URL`
-        os.chdir(dire)
-        root = Git(dire, 'root')
-        if not root:
-            error_message('{} is not a git repository:\n  {}'.format(
-                dire, root.output))
-
-        rep = Git(dire, 'remote', 'get-url --push origin')
-        if not rep:
-            error_message(
-                'Unable to find remote repository for {}'.format(dire)
-            )
-
-        dire = self.short_path(root.output.strip())
-        rep = rep.output.strip()
 
         del self.catalogue[rep]
         self.message('Removing {} from the catalogue'.format(dire))
@@ -1285,11 +1279,20 @@ def setup_command_line_parser(settings):
         default=False,
         help=argparse.SUPPRESS)
     parser.add_argument(
+        '-m',
+        '--moveto',
+        default=0,
+        type=int,
+        nargs='?',
+        help='Move repository to specified position in catalogue'
+    )
+    parser.add_argument(
         '-v',
         '--version',
         action='version',
         version=settings.version(),
-        help=argparse.SUPPRESS)
+        help=argparse.SUPPRESS
+    )
 
     # ---------------------------------------------------------------------------
     # add catalogue commands using settings and the git-options.ini file
@@ -1328,11 +1331,9 @@ def main():
 
         sys.exit()
 
-    elif options.command is None:
+    elif options.command is None and options.moveto==0:
         parser.print_help()
         sys.exit(1)
-
-
 
     GitCat(options, settings)
 
