@@ -101,9 +101,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - add a fast option
 #  - add exclude option
 #  - use parallel processing
-#  - ? add a "git cat git" command?
+#  - ? add a "git cat git" command
 #  - ? make "git cat pull" first update the repository containing the gitcatrc file and
-#     then reread it?
+#     then reread it
 
 import argparse
 import os
@@ -921,11 +921,12 @@ class GitCat:
             debugging('\nPULLING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
-                pull = Git(rep, 'pull', options)
-                if pull:
-                    if pull.output == '':
+                behind = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
+                if behind:
+                    if 'behind' in behind.output:
                         self.rep_message(rep, 'already up to date')
                     else:
+                        pull = Git(rep, 'pull', options)
                         self.rep_message(
                             rep,
                             'pulling\n' + '\n'.join(
@@ -972,9 +973,9 @@ class GitCat:
                 if commit:
                     if commit.output != '':
                         self.rep_message(rep, 'commit\n' + commit.output)
-                    push = Git(rep, 'push', options + ' --dry-run')
-                    if push:
-                        if '[up to date]' in push.output:
+                    ahead = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
+                    if ahead:
+                        if 'ahead' not in ahead.output:
                             self.rep_message(rep, 'up to date')
                         elif not self.dry_run:
                             push = Git(rep, 'push', options)
