@@ -54,8 +54,8 @@ streamline the management of multiple git repositories so, by default, it
 prints a summary of what it does to each repository to the terminal.
 
 By default, the `git cat` commands are applied to all of the repositories that
-are managed by `git cat`, however, repositories that the command is applied to
-by supplying a regular expression.
+are managed by `git cat`, however, you can restrict the repositories to be
+processed by supplying a regular expression.
 
 *Examples*:
 
