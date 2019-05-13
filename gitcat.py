@@ -921,11 +921,12 @@ class GitCat:
             debugging('\nPULLING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
-                pull = Git(rep, 'pull', options)
-                if pull:
-                    if pull.output == '':
+                behind = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
+                if behind:
+                    if 'behind' in behind.output:
                         self.rep_message(rep, 'already up to date')
                     else:
+                        pull = Git(rep, 'pull', options)
                         self.rep_message(
                             rep,
                             'pulling\n' + '\n'.join(
