@@ -921,19 +921,17 @@ class GitCat:
             debugging('\nPULLING ' + rep)
             dire = self.expand_path(rep)
             if self.is_git_repository(dire):
-                behind = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
-                if behind:
-                    if 'behind' not in behind.output:
+                pull = Git(rep, 'pull', options)
+                if pull:
+                    if pull.output == '':
                         self.rep_message(rep, 'already up to date')
                     else:
-                        pull = Git(rep, 'pull', options)
-                        if 'no tracking information' in pull.output:
-                            self.rep_message(rep, pull.output)
-                        else:
-                            print('behind={}, output={}.'.format(behind.output, pull.output))
-                            self.rep_message(rep,
-                                'pulling\n' + '\n'.join(lin for lin in pull.output.split('\n') if 'Compressing' not in lin),
-                                quiet=False)
+                        self.rep_message(
+                            rep,
+                            'pulling\n' + '\n'.join(
+                                lin for lin in pull.output.split('\n')
+                                if 'Compressing' not in lin),
+                            quiet=False)
             else:
                 self.rep_message(rep, 'repository not installed')
 
