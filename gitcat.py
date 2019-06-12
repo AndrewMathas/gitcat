@@ -286,7 +286,7 @@ class Settings(dict):
                             except (NameError, SyntaxError, TypeError):
                                 self.commands[command][opt][choices[0]] = choices[1]
                     else:
-                        error_message(
+                        rror_message(
                             'syntax error in {} on the line\n {}'.format(options_file, line)
                         )
 
@@ -378,6 +378,7 @@ class Git:
                 git.stderr.decode().strip().replace('\n', '\n  ').replace(
                     '\r', '\n  '),
             )
+            print(self.error_message)
             debugging('{line}{err}{line}'.format(line='-' * 40, err=self.error_message))
             self.git_command_ok = False
         else:
@@ -388,8 +389,7 @@ class Git:
             git.stdout.decode().replace('\r', '\n').strip().split('\n') +
             git.stderr.decode().replace('\r', '\n').strip().split('\n'))
                                 if lin != '')
-        debugging('{}\nstdout={}\nstderr={}'.format(self, git.stdout,
-                                                    git.stderr))
+        debugging('{}\nstdout={}\nstderr={}'.format(self, git.stdout, git.stderr))
 
     def __bool__(self):
         ''' return 'self.is_ok` '''
@@ -493,8 +493,7 @@ class GitCat:
         os.chdir(dire)
         root = Git(dire, 'root')
         if not root:
-            error_message('{} is not a git repository:\n  {}'.format(
-                dire, root.output))
+            error_message('{} is not a git repository:\n  {}'.format(dire, root.output))
         return root
 
     def is_git_repository(self, dire):
@@ -586,15 +585,12 @@ class GitCat:
 
                         else:
                             if dire in self.catalogue:
-                                error_message(
-                                    '{} appears in the catalogue more than once!'.
-                                    format(dire))
+                                error_message('{} appears in the catalogue more than once!'.format(dire))
                             else:
                                 self.catalogue[dire] = rep.strip()
 
         except (FileNotFoundError, OSError):
-            error_message('there was a problem reading the catalogue file {}'.format(
-                    self.gitcatrc))
+            error_message('there was a problem reading the catalogue file {}'.format(self.gitcatrc))
 
         # set the maximum length of a catalogue key
         try:
@@ -699,9 +695,7 @@ class GitCat:
         rep = rep.output.strip()
         if dire in self.catalogue:
             # give an error if repository is already in the catalogue
-            error_message(
-                'the git repository in {} is already in the catalogue'.format(
-                    dire))
+            error_message('the git repository in {} is already in the catalogue'.format(dire))
         else:
             # add current directory to the repository and save
             self.catalogue[dire] = rep
@@ -982,15 +976,13 @@ class GitCat:
                             if push:
                                 if push.output.startswith('  To ') and push.output.endswith('Done'):
                                     if commit.output == '' and 'up to date' not in commit.output:
-                                        self.rep_message(
-                                            rep, 'pushed\n' + push.output)
+                                        self.rep_message(rep, 'pushed\n' + push.output)
                                     else:
                                         self.message(
                                             push.output.split('\n')[0])
                                 else:
                                     if commit.output == '' and 'up to date' not in commit.output:
-                                        self.rep_message(
-                                            rep, 'pushed\n' + push.output)
+                                        self.rep_message(rep, 'pushed\n' + push.output)
                                     else:
                                         self.message(push.output)
 
