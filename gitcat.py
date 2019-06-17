@@ -691,7 +691,7 @@ class GitCat:
         if not rep:
             error_message('Unable to find remote repository for {}'.format(dire))
 
-        dire = self.short_path(root.output.strip())
+        dire = self.short_path(dire.output.strip())
         rep = rep.output.strip()
         if dire in self.catalogue:
             # give an error if repository is already in the catalogue
