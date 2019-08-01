@@ -122,6 +122,22 @@ except ImportError:
     argcomplete = False
 
 # ---------------------------------------------------------------------------
+import socket
+REMOTE_SERVER = "www.google.com"
+def connected_to_internet(hostname=REMOTE_SERVER):
+  try:
+    # see if we can resolve the host name -- tells us if there is
+    # a DNS listening
+    host = socket.gethostbyname(hostname)
+    # connect to the host -- tells us if the host is actually
+    # reachable
+    s = socket.create_connection((host, 80), 2)
+    s.close()
+    return True
+  except:
+     pass
+  return False
+
 # compiled regular expressions
 
 # [ahead 1], or [behind 1] or [ahead # 2, behind 1] in status
@@ -468,6 +484,17 @@ class GitCat:
 
         return changed_files
 
+    def connected_to_internet(self, operation):
+        r'''
+        If we are connected to the internet then return `True`. Otherwise print
+        and error message and exit.
+        '''
+        if connected_to_internet():
+            return True
+
+        print('Unable to {}. Please check your internet connection'.format(operation))
+        return False
+
     def expand_path(self, dire):
         r'''
         Return the path to the directory `dire`, adding `self.prefix` if
@@ -731,22 +758,24 @@ class GitCat:
             Code/Project6            already up to date
 
         '''
-        # need to use -q to stop output being printed to stderr, but then we
-        # have to work harder to extract information about the pull
-        options = self.process_options('--verbose')
-        for rep in self.repositories():
-            debugging('\nBRANCH ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                pull = Git(rep, 'branch', options)
-                if pull:
-                    if '\n' not in pull.output:
-                        self.rep_message(rep, 'already up to date')
-                    else:
-                        self.rep_message(rep,
-                                         pull.output[pull.output.index('\n'):])
-            else:
-                self.rep_message(rep, 'not on system')
+        if self.connected_to_internet('check status of branches'):
+
+            # need to use -q to stop output being printed to stderr, but then we
+            # have to work harder to extract information about the pull
+            options = self.process_options('--verbose')
+            for rep in self.repositories():
+                debugging('\nBRANCH ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    pull = Git(rep, 'branch', options)
+                    if pull:
+                        if '\n' not in pull.output:
+                            self.rep_message(rep, 'already up to date')
+                        else:
+                            self.rep_message(rep,
+                                             pull.output[pull.output.index('\n'):])
+                else:
+                    self.rep_message(rep, 'not on system')
 
     def ls(self):
         r'''
@@ -776,11 +805,13 @@ class GitCat:
         Example:
             > git cat commit
         '''
-        for rep in self.repositories():
-            debugging('\nCOMMITTING ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                self.commit_repository(rep)
+        if self.connected_to_internet('commit repositories'):
+
+            for rep in self.repositories():
+                debugging('\nCOMMITTING ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    self.commit_repository(rep)
 
     def diff(self):
         r'''
@@ -800,18 +831,20 @@ class GitCat:
             -gitcatrc:
             +The gitcatrc file:
         '''
-        options = self.process_options()
-        options += ' HEAD'
-        for rep in self.repositories():
-            debugging('\nDIFFING ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                diff = Git(rep, 'diff', options)
-                if diff:
-                    if diff.output != '':
-                        self.rep_message(rep, diff.output.lstrip(), quiet=False)
-                    else:
-                        self.rep_message(rep, 'up to date')
+        if self.connected_to_internet('diff repositories'):
+
+            options = self.process_options()
+            options += ' HEAD'
+            for rep in self.repositories():
+                debugging('\nDIFFING ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    diff = Git(rep, 'diff', options)
+                    if diff:
+                        if diff.output != '':
+                            self.rep_message(rep, diff.output.lstrip(), quiet=False)
+                        else:
+                            self.rep_message(rep, 'up to date')
 
     def fetch(self):
         r'''
@@ -829,21 +862,22 @@ class GitCat:
               remote: Total 3 (delta 2), reused 0 (delta 0)
 
         '''
-        # need to use -q to stop output being printed to stderr, but then we
-        # have to work harder to extract information about the pull
-        options = self.process_options('-q --progress')
-        for rep in self.repositories():
-            debugging('\nFETCHING ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                pull = Git(rep, 'fetch', options)
-                if pull:
-                    if pull.output == '':
-                        self.rep_message(rep, 'already up to date')
-                    else:
-                        self.rep_message(rep, pull.output.lstrip())
-            else:
-                self.rep_message(rep, 'not on system')
+        if self.connected_to_internet('fetch repositories'):
+            # need to use -q to stop output being printed to stderr, but then we
+            # have to work harder to extract information about the pull
+            options = self.process_options('-q --progress')
+            for rep in self.repositories():
+                debugging('\nFETCHING ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    pull = Git(rep, 'fetch', options)
+                    if pull:
+                        if pull.output == '':
+                            self.rep_message(rep, 'already up to date')
+                        else:
+                            self.rep_message(rep, pull.output.lstrip())
+                else:
+                    self.rep_message(rep, 'not on system')
 
     def install(self):
         r'''
@@ -861,35 +895,36 @@ class GitCat:
             > git cat install       # install all repositories managed by git cat
             > git cat install Code  # install all "Code" repositories managed by git cat
         '''
-        for rep in self.repositories():
-            debugging('\nINSTALLING ' + rep)
-            dire = self.expand_path(rep)
-            if os.path.exists(dire):
-                if os.path.exists(os.path.join(dire, '.git')):
-                    self.rep_message(
-                        'git repository {} already exists'.format(dire))
-                else:
-                    # initialise current repository and fetch from remote
-                    Git(rep, 'init')
-                    Git(rep, 'remote add origin {}'.format(self.catalogue[rep]))
-                    Git(rep, 'fetch origin')
-                    Git(rep, 'checkout -b master --track origin/master')
+        if self.connected_to_internet('install new repositories'):
 
-            else:
-                self.rep_message(rep, 'installing')
-                parent = os.path.dirname(dire)
-                os.makedirs(parent, exist_ok=True)
-                os.chdir(parent)
-                if not self.dry_run:
-                    install = Git(
-                        rep, 'clone', '--quiet {rep} {dire}'.format(
-                            rep=self.catalogue[rep],
-                            dire=os.path.basename(dire)))
-                    if install:
-                        self.message(' - done!')
-            if not (self.dry_run or self.is_git_repository(dire)):
-                self.rep_message(
-                    rep, 'not a git repository!?'.format(rep), quiet=False)
+            for rep in self.repositories():
+                debugging('\nINSTALLING ' + rep)
+                dire = self.expand_path(rep)
+                if os.path.exists(dire):
+                    if os.path.exists(os.path.join(dire, '.git')):
+                        self.rep_message(
+                            'git repository {} already exists'.format(dire))
+                    else:
+                        # initialise current repository and fetch from remote
+                        Git(rep, 'init')
+                        Git(rep, 'remote add origin {}'.format(self.catalogue[rep]))
+                        Git(rep, 'fetch origin')
+                        Git(rep, 'checkout -b master --track origin/master')
+
+                else:
+                    self.rep_message(rep, 'installing')
+                    parent = os.path.dirname(dire)
+                    os.makedirs(parent, exist_ok=True)
+                    os.chdir(parent)
+                    if not self.dry_run:
+                        install = Git(
+                            rep, 'clone', '--quiet {rep} {dire}'.format(
+                                rep=self.catalogue[rep],
+                                dire=os.path.basename(dire)))
+                        if install:
+                            self.message(' - done!')
+                if not (self.dry_run or self.is_git_repository(dire)):
+                    self.rep_message(rep, 'not a git repository!?'.format(rep), quiet=False)
 
     def pull(self):
         r'''
@@ -908,26 +943,28 @@ class GitCat:
             Notes/Life     already up to date
 
         '''
-        # need to use -q to stop output being printed to stderr, but then we
-        # have to work harder to extract information about the pull
-        options = self.process_options('-q --progress')
-        for rep in self.repositories():
-            debugging('\nPULLING ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                pull = Git(rep, 'pull', options)
-                if pull:
-                    if pull.output == '':
-                        self.rep_message(rep, 'already up to date')
-                    else:
-                        self.rep_message(
-                            rep,
-                            'pulling\n' + '\n'.join(
-                                lin for lin in pull.output.split('\n')
-                                if 'Compressing' not in lin),
-                            quiet=False)
-            else:
-                self.rep_message(rep, 'repository not installed')
+        if self.connected_to_internet('pull repositories'):
+
+            # need to use -q to stop output being printed to stderr, but then we
+            # have to work harder to extract information about the pull
+            options = self.process_options('-q --progress')
+            for rep in self.repositories():
+                debugging('\nPULLING ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    pull = Git(rep, 'pull', options)
+                    if pull:
+                        if pull.output == '':
+                            self.rep_message(rep, 'already up to date')
+                        else:
+                            self.rep_message(
+                                rep,
+                                'pulling\n' + '\n'.join(
+                                    lin for lin in pull.output.split('\n')
+                                    if 'Compressing' not in lin),
+                                quiet=False)
+                else:
+                    self.rep_message(rep, 'repository not installed')
 
     def push(self):
         r'''
@@ -955,39 +992,40 @@ class GitCat:
             Notes/Life     up to date
 
         '''
-        debugging('\nPUSHING ')
-        options = self.process_options('--porcelain --follow-tags')
-        for rep in self.repositories():
-            debugging('\nPUSHING ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                debugging('Continuing with push')
-                commit = self.commit_repository(rep)
-                if commit:
-                    if commit.output != '':
-                        self.rep_message(rep, 'commit\n' + commit.output)
-                    ahead = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
-                    if ahead:
-                        if 'ahead' not in ahead.output:
-                            self.rep_message(rep, 'up to date')
-                        elif not self.dry_run:
-                            push = Git(rep, 'push', options)
+        if self.connected_to_internet('push repositories'):
+            debugging('\nPUSHING ')
+            options = self.process_options('--porcelain --follow-tags')
+            for rep in self.repositories():
+                debugging('\nPUSHING ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    debugging('Continuing with push')
+                    commit = self.commit_repository(rep)
+                    if commit:
+                        if commit.output != '':
+                            self.rep_message(rep, 'commit\n' + commit.output)
+                        ahead = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
+                        if ahead:
+                            if 'ahead' not in ahead.output:
+                                self.rep_message(rep, 'up to date')
+                            elif not self.dry_run:
+                                push = Git(rep, 'push', options)
 
-                            if push:
-                                if push.output.startswith('  To ') and push.output.endswith('Done'):
-                                    if commit.output == '' and 'up to date' not in commit.output:
-                                        self.rep_message(rep, 'pushed\n' + push.output)
+                                if push:
+                                    if push.output.startswith('  To ') and push.output.endswith('Done'):
+                                        if commit.output == '' and 'up to date' not in commit.output:
+                                            self.rep_message(rep, 'pushed\n' + push.output)
+                                        else:
+                                            self.message(
+                                                push.output.split('\n')[0])
                                     else:
-                                        self.message(
-                                            push.output.split('\n')[0])
-                                else:
-                                    if commit.output == '' and 'up to date' not in commit.output:
-                                        self.rep_message(rep, 'pushed\n' + push.output)
-                                    else:
-                                        self.message(push.output)
+                                        if commit.output == '' and 'up to date' not in commit.output:
+                                            self.rep_message(rep, 'pushed\n' + push.output)
+                                        else:
+                                            self.message(push.output)
 
-            else:
-                self.rep_message(rep, 'not on system')
+                else:
+                    self.rep_message(rep, 'not on system')
 
     def remote_set_ssh(self):
         r'''
@@ -1009,31 +1047,33 @@ class GitCat:
             Code/Project2  changed to ssh access
             Code/Project3  unchanged
         '''
-        for rep in self.repositories():
-            debugging('\nCONVERT-TO-SSH ' + rep)
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
-                remote = Git(rep, 'remote', '-v')
-                changed = [] # avoid duplicates by keeping a list of remotes that have already been changed
-                if remote:
-                    if 'https://' in remote.output:
-                        # remotes will be repeating triples that look something like:
-                        # 'origin', 'https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git', '(fetch)'
-                        remotes = remote.output.split()
-                        r=0
-                        while r+1<len(remotes):
-                            https = remotes[r+1] # a https string as above
-                            if remotes[r] not in changed and '@' in https:
-                                ssh = 'git'+https[https.index('@'):].replace('/',':',1)
-                                changing = Git(rep, 'remote', 'set-url {} {}'.format(remotes[r], ssh))
-                                if changing:
-                                    self.rep_message(rep, 'changed to ssh access')
-                                    changed.append(remotes[r])
-                            r += 3
-                    else:
-                        self.rep_message(rep, 'unchanged')
-            else:
-                self.rep_message(rep, 'not on system')
+        if self.connected_to_internet('change ssh settings'):
+
+            for rep in self.repositories():
+                debugging('\nCONVERT-TO-SSH ' + rep)
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
+                    remote = Git(rep, 'remote', '-v')
+                    changed = [] # avoid duplicates by keeping a list of remotes that have already been changed
+                    if remote:
+                        if 'https://' in remote.output:
+                            # remotes will be repeating triples that look something like:
+                            # 'origin', 'https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git', '(fetch)'
+                            remotes = remote.output.split()
+                            r=0
+                            while r+1<len(remotes):
+                                https = remotes[r+1] # a https string as above
+                                if remotes[r] not in changed and '@' in https:
+                                    ssh = 'git'+https[https.index('@'):].replace('/',':',1)
+                                    changing = Git(rep, 'remote', 'set-url {} {}'.format(remotes[r], ssh))
+                                    if changing:
+                                        self.rep_message(rep, 'changed to ssh access')
+                                        changed.append(remotes[r])
+                                r += 3
+                        else:
+                            self.rep_message(rep, 'unchanged')
+                else:
+                    self.rep_message(rep, 'not on system')
 
     def remove(self):
         r'''
@@ -1092,55 +1132,57 @@ class GitCat:
               M git-options.ini
               M gitcat.py
         '''
-        status_options = self.process_options('--porcelain --short --branch')
-        diff_options = '--shortstat --no-color'
+        if self.connected_to_internet('check status'):
 
-        for rep in self.repositories():
-            debugging('\nSTATUS for {}'.format(rep))
-            dire = self.expand_path(rep)
-            if self.is_git_repository(dire):
+            status_options = self.process_options('--porcelain --short --branch')
+            diff_options = '--shortstat --no-color'
 
-                # update with remote, unless local is true
-                remote = self.options.git_local or Git(rep, 'remote', 'update')
+            for rep in self.repositories():
+                debugging('\nSTATUS for {}'.format(rep))
+                dire = self.expand_path(rep)
+                if self.is_git_repository(dire):
 
-                if remote:
-                    # use status to work out relative changes
-                    status = Git(rep, 'status', status_options)
-                    if status:
-                        changes = ahead_behind.search(status.output)
-                        changes = '' if changes is None else changes.group()[1:-1]
+                    # update with remote, unless local is true
+                    remote = self.options.git_local or Git(rep, 'remote', 'update')
 
-                        if '\n' in status.output:
-                            status.output = status.output[status.output.
-                                                          index('\n') + 1:]
-                        elif status.output.startswith('  ##'):
-                            status.output = ''
+                    if remote:
+                        # use status to work out relative changes
+                        status = Git(rep, 'status', status_options)
+                        if status:
+                            changes = ahead_behind.search(status.output)
+                            changes = '' if changes is None else changes.group()[1:-1]
 
-                        # use diff to work out which files have changed
-                        diff = Git(rep, 'diff', diff_options)
-                        changed = ''
-                        if diff:
-                            changed = files_changed.search(diff.output)
-                            changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
+                            if '\n' in status.output:
+                                status.output = status.output[status.output.
+                                                              index('\n') + 1:]
+                            elif status.output.startswith('  ##'):
+                                status.output = ''
 
-                        debugging('changes = {}\nchanged={}\nstatus={}'.format(
-                            changes, changed, status.output))
+                            # use diff to work out which files have changed
+                            diff = Git(rep, 'diff', diff_options)
+                            changed = ''
+                            if diff:
+                                changed = files_changed.search(diff.output)
+                                changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
 
-                        if changes != '':
-                            changed += changes if changed == '' else ', ' + changes
+                            debugging('changes = {}\nchanged={}\nstatus={}'.format(
+                                changes, changed, status.output))
 
-                        if status.output != '':
-                            self.rep_message(
-                                rep,
-                                changed + '\n' + status.output,
-                                quiet=False)
-                        elif changed != '':
-                            self.rep_message(rep, changed, quiet=False)
-                        else:
-                            self.rep_message(rep, 'up to date')
+                            if changes != '':
+                                changed += changes if changed == '' else ', ' + changes
 
-            else:
-                self.rep_message(rep, 'not on system')
+                            if status.output != '':
+                                self.rep_message(
+                                    rep,
+                                    changed + '\n' + status.output,
+                                    quiet=False)
+                            elif changed != '':
+                                self.rep_message(rep, changed, quiet=False)
+                            else:
+                                self.rep_message(rep, 'up to date')
+
+                else:
+                    self.rep_message(rep, 'not on system')
 
 
 # ---------------------------------------------------------------------------
@@ -1219,8 +1261,8 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
 def setup_command_line_parser(settings):
     '''
     Return parsers for the command line options and the commands.
-    The function is used to parse the command-line options an to automatically
-    generate the documentation from setup.py
+    The function is used to parse the command-line options an to
+    automatically generate the documentation from setup.py
     '''
     # set parse the command line options using argparse
     parser = argparse.ArgumentParser(
