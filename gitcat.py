@@ -15,12 +15,12 @@ lone developer who has wants to synchronise multiple git repositories that live
 on several computers. In particular, with one `git cat` command you can run git
 commands on multiple git repositories, such as pushing or pulling from remote
 servers, such as bitbucket_ and github_. When pushing, any local changes to the
-repositores will be automatically commited.
+repositories will be automatically commited.
 
 `Git cat` provides only a thin veneer over git. It does not support all git
 commands and nor does it support the full functionality of those git commands
 that it does support. The `git cat` philosophy is to "do no harm" so, when
-possible, it uses dry-runs before changing any repository and it wil only
+possible, it uses dry-runs before changing any repository and it will only
 change a repository if the dry-run succeeds. Any problems encountered by `git
 cat` are printed to the terminal (stdout). The aim of `git cat` is to
 streamline the management of multiple git repositories so, by default, it
@@ -53,7 +53,7 @@ can be changed from the command line using the `-c` command line option.
 The `git cat` commands are only applied to those repositories that have been
 "installed" using `git cat install`. Consequently, if the gitcatrc file is
 itself in a git repository then different computers that use this file can
-syncrhonise different repositories using `git cat`.
+synchronise different repositories using `git cat`.
 
 ******
 
@@ -452,8 +452,8 @@ class GitCat:
         # read the catalogue from the rc file
         self.read_catalogue()
 
-        if options.moveto > 0:
-            self.move_to(opions.moveto)
+        if options.moveto is not None:
+            self.moveto(options.moveto)
         else:
             # run corresponding command - but allow shorthands
             command = options.command.replace('-','_')
@@ -507,10 +507,10 @@ class GitCat:
         Return the root directory of the git repository that contains the
         current working directory.
         '''
-        if self.options.git_directory is None:
-            dire = self.short_path(os.getcwd())
-        else:
+        if hasattr(self.options, 'repositry') and self.options.repository is not None:
             dire = self.short_path(os.path.expanduser(self.options.repository))
+        else:
+            dire = self.short_path(os.getcwd())
         dire = self.expand_path(dire)
 
         if not (os.path.isdir(dire) and self.is_git_repository(dire)):
@@ -551,11 +551,38 @@ class GitCat:
             is_git_repository(self.expand_path(dire)) else '!',
             max=self.max) for dire in self.repositories())
 
-    def move_to(self, position):
+    def moveto(self, position):
         r'''
         Move current repository to position `moveto` in the catalogue
         '''
-        pass
+        dire = self.get_current_git_root()
+        rep = Git(dire, 'remote', 'get-url --push origin')
+        if not rep:
+            error_message('Unable to find remote repository for {}'.format(dire))
+        dire = self.short_path(dire.output.strip())
+        if dire in self.catalogue:
+            # as is usual in python, negatives count backwards
+            if position<0:
+                position += len(self.catalogue.keys())
+            reps = list(self.catalogue.keys())
+            dire_pos = reps.index(dire)
+            if dire_pos != position:
+                # make a copy of the catalogue and then recreate it
+                cat = self.catalogue.copy()
+                self.catalogue = {}
+                pos = 0
+                delta = 0
+                for pos in range(len(cat.keys())):
+                    if pos == position:
+                        self.catalogue[dire] = cat[dire]
+                        delta = -1 if position<dire_pos else 0
+                    else:
+                        self.catalogue[reps[pos+delta]] = cat[reps[pos+delta]]
+                    if pos == dire_pos:
+                        delta = 1 if position>dire_pos else 0
+                self.save_catalogue()
+        else:
+            error_message('the git repository {} is not in the catalogue'.format(dire))
 
     def process_options(self, default_options=''):
         r'''
@@ -1315,9 +1342,8 @@ def setup_command_line_parser(settings):
     parser.add_argument(
         '-m',
         '--moveto',
-        default=0,
+        default=None,
         type=int,
-        nargs='?',
         help='Move repository to specified position in catalogue'
     )
     parser.add_argument(
@@ -1365,7 +1391,7 @@ def main():
 
         sys.exit()
 
-    elif options.command is None and options.moveto==0:
+    elif options.command is None and options.moveto is None:
         parser.print_help()
         sys.exit(1)
 
