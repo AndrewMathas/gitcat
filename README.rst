@@ -5,7 +5,8 @@
 
 *Herding a catalogue of git repositories*
 
-usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] <command> [options] ...
+usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] [-m MOVETO]
+               <command> [options] ...
 
 Simultaneously synchronise multiple local and remote git repositories
 
@@ -17,6 +18,8 @@ Optional arguments:
                         Prefix directory name containing all repositories
   -q, --quiet           Print messages only if repository changes
   -h, --help            help: for extended help use -hh and -hhh
+  -m MOVETO, --moveto MOVETO
+                        Move repository to specified position in catalogue
 
 Commands::
 
@@ -42,20 +45,20 @@ lone developer who has wants to synchronise multiple git repositories that live
 on several computers. In particular, with one `git cat` command you can run git
 commands on multiple git repositories, such as pushing or pulling from remote
 servers, such as bitbucket_ and github_. When pushing, any local changes to the
-repositores will be automatically commited.
+repositories will be automatically commited.
 
 `Git cat` provides only a thin veneer over git. It does not support all git
 commands and nor does it support the full functionality of those git commands
 that it does support. The `git cat` philosophy is to "do no harm" so, when
-possible, it uses dry-runs before changing any repository and it wil only
+possible, it uses dry-runs before changing any repository and it will only
 change a repository if the dry-run succeeds. Any problems encountered by `git
 cat` are printed to the terminal (stdout). The aim of `git cat` is to
 streamline the management of multiple git repositories so, by default, it
 prints a summary of what it does to each repository to the terminal.
 
 By default, the `git cat` commands are applied to all of the repositories that
-are managed by `git cat`, however, you can restrict the repositories to be
-processed by supplying a regular expression.
+are managed by `git cat`, however, repositories that the command is applied to
+by supplying a regular expression.
 
 *Examples*:
 
@@ -83,7 +86,7 @@ can be changed from the command line using the `-c` command line option.
 The `git cat` commands are only applied to those repositories that have been
 "installed" using `git cat install`. Consequently, if the gitcatrc file is
 itself in a git repository then different computers that use this file can
-syncrhonise different repositories using `git cat`.
+synchronise different repositories using `git cat`.
 
 
 ------------
