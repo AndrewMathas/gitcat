@@ -212,7 +212,7 @@ class Settings(dict):
                         options = self.commands[cmd][option].copy()
                         short_option = options['short-option']
                         del options['short-option']
-                        debugging('short option = {}.'.format(short_option))
+                        debugging('short option = {short_option}.')
                         if short_option is None:
                             command.add_argument('--' + option, **options)
                         else:
@@ -302,9 +302,7 @@ class Settings(dict):
                             except (NameError, SyntaxError, TypeError):
                                 self.commands[command][opt][choices[0]] = choices[1]
                     else:
-                        rror_message(
-                            'syntax error in {} on the line\n {}'.format(options_file, line)
-                        )
+                        rror_message(f'syntax error in {options_file} on the line\n {line}')
 
     def save_settings(self):
         r'''
@@ -312,7 +310,7 @@ class Settings(dict):
         '''
         save_settings = ''
         if self.prefix != os.environ['HOME']:
-            save_settings += 'prefix = {}\n'.format(self.prefix)
+            save_settings += f'prefix = {self.prefix}\n'
 
         if save_settings !='':
             return '\n'+save_settings+'\n'
@@ -320,7 +318,7 @@ class Settings(dict):
 
     def version(self):
         """ return gitcat version """
-        return 'git cat version {}'.format(self._version)
+        return f'git cat version {self._version}'
 
 
 file = lambda f: os.path.join(os.path.dirname(__file__), f)
@@ -333,7 +331,7 @@ def error_message(err):
     r'''
     Print error message and exit.
     '''
-    print('git cat error: {}'.format(err))
+    print(f'git cat error: {err}')
     sys.exit(1)
 
 
@@ -346,8 +344,8 @@ def debugging(message):
 # ---------------------------------------------------------------------------
 def graceful_exit(sig, frame):
     ''' exit gracefully on SIGINT and SIGTERM '''
-    print('program terminated (signal {})'.format(sig))
-    debugging('{}'.format(frame))
+    print(f'program terminated (signal {sig})')
+    debugging(f'{frame}')
     sys.exit()
 
 
@@ -376,10 +374,7 @@ class Git:
 
     def __init__(self, rep, command, options=''):
         """ run a git command and wrap the return values for later use """
-        git = subprocess.run(
-            'git {} {}'.format(command, options).strip(),
-            shell=True,
-            capture_output=True)
+        git = subprocess.run(f'git {command} {options}'.strip(), shell=True, capture_output=True)
 
         # store the output
         self.rep = rep
@@ -405,7 +400,7 @@ class Git:
             git.stdout.decode().replace('\r', '\n').strip().split('\n') +
             git.stderr.decode().replace('\r', '\n').strip().split('\n'))
                                 if lin != '')
-        debugging('{}\nstdout={}\nstderr={}'.format(self, git.stdout, git.stderr))
+        debugging(f'{self}\nstdout={git.stdout}\nstderr={git.stderr}')
 
     def __bool__(self):
         ''' return 'self.is_ok` '''
@@ -477,7 +472,7 @@ class GitCat:
         changed_files = self.changed_files(rep)
         if changed_files and changed_files.output != '':
             commit_message = 'git cat: updating ' + changed_files.output
-            options = '--all --message="{}"'.format(commit_message)
+            options = f'--all --message="{commit_message}"'
             if self.dry_run:
                 options += ' --porcelain' # implies --dry-run
             return Git(rep, 'commit', options)
@@ -492,7 +487,7 @@ class GitCat:
         if connected_to_internet():
             return True
 
-        print('Unable to {}. Please check your internet connection'.format(operation))
+        print(f'Unable to {operation}. Please check your internet connection')
         return False
 
     def expand_path(self, dire):
@@ -514,13 +509,13 @@ class GitCat:
         dire = self.expand_path(dire)
 
         if not (os.path.isdir(dire) and self.is_git_repository(dire)):
-            error_message('{} not a git repository'.format(dire))
+            error_message(f'{dire} not a git repository')
 
         # find the root directory for the repository and the remote URL`
         os.chdir(dire)
         root = Git(dire, 'root')
         if not root:
-            error_message('{} is not a git repository:\n  {}'.format(dire, root.output))
+            error_message(f'{dire} is not a git repository:\n  {root.output}')
         return root
 
     def is_git_repository(self, dire):
@@ -529,7 +524,7 @@ class GitCat:
         part of testing for a repository the current working directory is also
         changed to `dire`.
         '''
-        debugging('\nCHECKING for git dire={}'.format(dire))
+        debugging(f'\nCHECKING for git dire={dire}')
         if os.path.isdir(dire):
             os.chdir(dire)
             rep = dire.replace(self.prefix + '/', '')
@@ -558,7 +553,7 @@ class GitCat:
         dire = self.get_current_git_root()
         rep = Git(dire, 'remote', 'get-url --push origin')
         if not rep:
-            error_message('Unable to find remote repository for {}'.format(dire))
+            error_message(f'Unable to find remote repository for {dire}')
         dire = self.short_path(dire.output.strip())
         if dire in self.catalogue:
             # as is usual in python, negatives count backwards
@@ -582,7 +577,7 @@ class GitCat:
                         delta = 1 if position>dire_pos else 0
                 self.save_catalogue()
         else:
-            error_message('the git repository {} is not in the catalogue'.format(dire))
+            error_message(f'The git repository {dire} is not in the catalogue')
 
     def process_options(self, default_options=''):
         r'''
@@ -602,7 +597,7 @@ class GitCat:
                 elif isinstance(val, str):
                     options += ' --{}={}'.format(opt, val)
                 else:
-                    debugging('option {}={} ignored'.format(option, val))
+                    debugging(f'option {option}={val} ignored')
         return options
 
     def read_catalogue(self):
@@ -635,16 +630,16 @@ class GitCat:
                             elif hasattr(self.options, dire):
                                 setattr(self.options, dire, rep)
                             else:
-                                self.message('bad setting "{}" in gitcatrc file'.format(dire))
+                                self.message(f'bad setting "{dire}" in gitcatrc file')
 
                         else:
                             if dire in self.catalogue:
-                                error_message('{} appears in the catalogue more than once!'.format(dire))
+                                error_message(f'{dire} appears in the catalogue more than once!')
                             else:
                                 self.catalogue[dire] = rep.strip()
 
         except (FileNotFoundError, OSError):
-            error_message('there was a problem reading the catalogue file {}'.format(self.gitcatrc))
+            error_message(f'there was a problem reading the catalogue file {self.gitcatrc}')
 
         # set the maximum length of a catalogue key
         try:
@@ -667,10 +662,9 @@ class GitCat:
         Return the shortened path to the directory `dire` obtained by removing `self.prefix`
         if necessary.
         '''
-        debugging('prefix = {}.'.format(self.prefix))
-        debugging('dire = {}, prefixed={}'.format(dire,
-                                                  dire.startswith(
-                                                      self.prefix)))
+        debugging(f'prefix = {self.prefix}.'.format(self.prefix))
+        debugging(f'dire = {dire}, prefixed={dire.startswith(self.prefix)}')
+
         return dire[len(self.prefix) + 1:] if dire.startswith(
             self.prefix) else dire
 
@@ -743,26 +737,24 @@ class GitCat:
 
         rep = Git(dire, 'remote', 'get-url --push origin')
         if not rep:
-            error_message('Unable to find remote repository for {}'.format(dire))
+            error_message(f'Unable to find remote repository for {dire}')
 
         dire = self.short_path(dire.output.strip())
         rep = rep.output.strip()
         if dire in self.catalogue:
             # give an error if repository is already in the catalogue
-            error_message('the git repository in {} is already in the catalogue'.format(dire))
+            error_message(f'the git repository in {dire} is already in the catalogue')
         else:
             # add current directory to the repository and save
             self.catalogue[dire] = rep
             self.save_catalogue()
-            self.message('Adding {} to the catalogue'.format(dire))
+            self.message(f'Adding {dire} to the catalogue')
 
             # check to see if the gitcatrc is in a git repository and, if so,
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(
-                    dire, 'commit', '--all --message="{}"'.format(
-                        'Adding {} to gitcatrc'.format(dire)))
+                Git(dire, 'commit', '--all --message="{}"'.format(f'Adding {dire} to gitcatrc'))
 
     def branch(self):
         r'''
@@ -929,12 +921,11 @@ class GitCat:
                 dire = self.expand_path(rep)
                 if os.path.exists(dire):
                     if os.path.exists(os.path.join(dire, '.git')):
-                        self.rep_message(
-                            'git repository {} already exists'.format(dire))
+                        self.rep_message(f'git repository {dire} already exists')
                     else:
                         # initialise current repository and fetch from remote
                         Git(rep, 'init')
-                        Git(rep, 'remote add origin {}'.format(self.catalogue[rep]))
+                        Git(rep, f'remote add origin {self.catalogue[rep]}')
                         Git(rep, 'fetch origin')
                         Git(rep, 'checkout -b master --track origin/master')
 
@@ -951,7 +942,7 @@ class GitCat:
                         if install:
                             self.message(' - done!')
                 if not (self.dry_run or self.is_git_repository(dire)):
-                    self.rep_message(rep, 'not a git repository!?'.format(rep), quiet=False)
+                    self.rep_message(rep, f'{rep} is not a git repository!?', quiet=False)
 
     def pull(self):
         r'''
@@ -1092,7 +1083,7 @@ class GitCat:
                                 https = remotes[r+1] # a https string as above
                                 if remotes[r] not in changed and '@' in https:
                                     ssh = 'git'+https[https.index('@'):].replace('/',':',1)
-                                    changing = Git(rep, 'remote', 'set-url {} {}'.format(remotes[r], ssh))
+                                    changing = Git(rep, 'remote', f'set-url {remotes[r]} {ssh}')
                                     if changing:
                                         self.rep_message(rep, 'changed to ssh access')
                                         changed.append(remotes[r])
@@ -1114,31 +1105,29 @@ class GitCat:
 
         '''
         dire = self.get_current_git_root()
+        rep = Git(dire, 'remote', 'get-url --push origin')
 
-        # if possible remove the prefix from dire to set the repository
-        if dire.startswith(self.prefix):
-            rep = dire[len(self.prefix)+1:]  # skip over prefix + leading /
-        else:
-            rep = dire
+        if not rep:
+            error_message(f'Unable to find remote repository for {dire}')
 
-        if not (rep in self.catalogue and self.is_git_repository(dire)):
-            error_message('unknown repository {}'.format(dire))
+        dire = self.short_path(dire.output.strip())
+        if dire not in self.catalogue:
+            error_message(f'unknown repository {dire}')
 
-        del self.catalogue[rep]
-        self.message('Removing {} from the catalogue'.format(dire))
+        del self.catalogue[dire]
+        self.message(f'Removing {dire} from the catalogue')
         self.save_catalogue()
 
         if self.options.git_everything:
             # remove directory
-            self.message('Removing directory {}'.format(dire))
+            self.message(f'Removing directory {dire}')
             shutil.rmtree(dire)
 
             # check to see if the gitcatrc is in a git repository and, if so,
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(dire, 'commit', '--all --message "{}"'.format(
-                          'Removing {} from gitcatrc'.format(dire)))
+                Git(dire, 'commit', '--all --message "{}"'.format(f'Removing {dire} from gitcatrc'))
 
     def status(self):
         r'''
@@ -1165,7 +1154,7 @@ class GitCat:
             diff_options = '--shortstat --no-color'
 
             for rep in self.repositories():
-                debugging('\nSTATUS for {}'.format(rep))
+                debugging(f'\nSTATUS for {rep}')
                 dire = self.expand_path(rep)
                 if self.is_git_repository(dire):
 
@@ -1192,8 +1181,7 @@ class GitCat:
                                 changed = files_changed.search(diff.output)
                                 changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
 
-                            debugging('changes = {}\nchanged={}\nstatus={}'.format(
-                                changes, changed, status.output))
+                            debugging(f'changes = {changes}\nchanged={changed}\nstatus={status,output}')
 
                             if changes != '':
                                 changed += changes if changed == '' else ', ' + changes
@@ -1256,7 +1244,7 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
             help_text = ""
             if action.help:
                 help_text = self._expand_help(action)
-            return "  {:{width}}  {}\n".format(subcommand, help_text, width=width)
+            return f'  {subcommand:{width}}  {help_text}\n'
 
         elif isinstance(action, argparse._SubParsersAction):
             # process subcommand help section
@@ -1307,7 +1295,7 @@ def setup_command_line_parser(settings):
         '--catalogue',
         type=str,
         default=settings.rc_file,
-        help='specify the catalogue of git repositories (default: {})'.format(settings.rc_file))
+        help=f'specify the catalogue of git repositories (default: {settings.rc_file})')
     parser.add_argument(
         '-p',
         '--prefix',
