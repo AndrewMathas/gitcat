@@ -1181,7 +1181,7 @@ class GitCat:
                                 changed = files_changed.search(diff.output)
                                 changed = '' if changed is None else 'uncommitted changes in ' + changed.groups()[0]
 
-                            debugging(f'changes = {changes}\nchanged={changed}\nstatus={status,output}')
+                            debugging(f'changes = {changes}\nchanged={changed}\nstatus={status.output}')
 
                             if changes != '':
                                 changed += changes if changed == '' else ', ' + changes
