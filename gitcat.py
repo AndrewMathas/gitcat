@@ -916,6 +916,7 @@ class GitCat:
         '''
         if self.connected_to_internet('install new repositories'):
 
+            installed_something = False
             for rep in self.repositories():
                 debugging('\nINSTALLING ' + rep)
                 dire = self.expand_path(rep)
@@ -928,6 +929,7 @@ class GitCat:
                         Git(rep, f'remote add origin {self.catalogue[rep]}')
                         Git(rep, 'fetch origin')
                         Git(rep, 'checkout -b master --track origin/master')
+                        installed_something = True
 
                 else:
                     self.rep_message(rep, 'installing')
@@ -935,14 +937,16 @@ class GitCat:
                     os.makedirs(parent, exist_ok=True)
                     os.chdir(parent)
                     if not self.dry_run:
-                        install = Git(
-                            rep, 'clone', '--quiet {rep} {dire}'.format(
-                                rep=self.catalogue[rep],
-                                dire=os.path.basename(dire)))
+                        install = Git(rep, 'clone', f'--quiet {self.catalogue[rep]} {os.path.basename(dire)}')
                         if install:
+                            installed_something = True
                             self.message(' - done!')
                 if not (self.dry_run or self.is_git_repository(dire)):
                     self.rep_message(rep, f'{rep} is not a git repository!?', quiet=False)
+
+            if not installed_something:
+                error_message('No matching repositories found to install')
+
 
     def pull(self):
         r'''
