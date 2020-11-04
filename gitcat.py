@@ -85,7 +85,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 .. _Python: https://www.python.org/
 '''
 
-# flag to enable argparse autocmpletion if argcomplete is installed
+# flag to enable argparse autocompletion if argcomplete is installed
 # PYTHON_ARGCOMPLETE_OK
 
 # ---------------------------------------------------------------------------
@@ -190,7 +190,7 @@ class Settings(dict):
     def doc_string(cmd):
         '''
         Return a sanitised version of the doc-string for the method `cmd` of
-        `GitCat`. In particular, all code-blocks are removed.
+        `GitCat`. In particuar, all code-blocks are removed.
         '''
         return textwrap.dedent(getattr(GitCat, cmd.replace('-','_')).__doc__)
 
@@ -199,8 +199,10 @@ class Settings(dict):
         Generate all of the `git cat` command options as parsers of `commands`
         '''
         for cmd in self.commands:
+            print(f'cmd={cmd}, aliases={[ cmd[:i] for i in range(3,len(cmd))]}')
             command = commands.add_parser(
                 cmd,
+                aliases=[ cmd[:i] for i in range(3,len(cmd))],
                 help=self.commands[cmd]['description'],
                 description=self.commands[cmd]['description'],
                 formatter_class=argparse.RawTextHelpFormatter,
@@ -1097,7 +1099,7 @@ class GitCat:
                 else:
                     self.rep_message(rep, 'not on system')
 
-    def remove(self):
+    def rm(self):
         r'''
         Remove the current repository to the catalogue stored in the gitcatrc
         file. An error is returned if any of the following hold:
@@ -1230,7 +1232,31 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
                 for word in possible:
                     extra.append('  * %s' % word)
                 msg.extend(extra)
-            raise argparse.ArgumentError(action, '\n'.join(msg)) 
+            raise argparse.ArgumentError(action, '\n'.join(msg))
+
+    def _format_action_invocation(self, act):
+        """
+        Initial substrings of the subparser commands are accepted as aliases
+        for the command.  By default, in the help, the list of aliases are shown
+        with each subparser command, leading to help output like:
+
+            Commands:
+              add               Add current repository to the catalogue
+              branch (bra, bran, branc)  Print status of all branches in each repository
+              commit (com, comm, commi)  Commit changes in all repositories
+              diff (dif)        Print a diff of the changes in each repository
+              fetch (fet, fetc)  Fetch all repositories from remote repositories
+              install (ins, inst, insta, instal)  Install repository from the catalogue
+              ls                List all repositories in the catalogue
+
+        Override `self._format_action_invocation` in order to remove the list
+        of aliases from each subparser command.
+        """
+        inv = super()._format_action_invocation(act)
+        print(f'inv={inv}.')
+        if ' (' in inv:
+            return inv[:inv.index(' (')]
+        return inv
 
     def _format_action(self, action):
         if isinstance(action, argparse._SubParsersAction):
