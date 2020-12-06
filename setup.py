@@ -129,7 +129,7 @@ setup(name             = settings.program,
       data_files       = [('man/man1', ['man/man1/git-cat.1'])],
 
       packages=find_packages(),
-      python_requires='>=3.7',
+      python_requires='>=3.9',
 
       entry_points     = {'console_scripts': ['git-cat = gitcat:main', ],},
 

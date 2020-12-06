@@ -165,6 +165,9 @@ class Settings(dict):
         self.quiet = False      # defaults
         self.dry_run = False
 
+        # store a dictionary of aliases for the git cat command
+        self.command_alias = {}
+
         # location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc
         # and then to ~/.gitcatrc
         if os.path.isdir(os.path.expanduser('~/.dotfiles/config')):
@@ -199,10 +202,14 @@ class Settings(dict):
         Generate all of the `git cat` command options as parsers of `commands`
         '''
         for cmd in self.commands:
-            print(f'cmd={cmd}, aliases={[ cmd[:i] for i in range(3,len(cmd))]}')
+            aliases = []
+            for c in range(3, len(cmd)):
+                self.command_alias[cmd[:c]] = cmd
+                aliases.append(cmd[:c])
+
             command = commands.add_parser(
                 cmd,
-                aliases=[ cmd[:i] for i in range(3,len(cmd))],
+                aliases=aliases,
                 help=self.commands[cmd]['description'],
                 description=self.commands[cmd]['description'],
                 formatter_class=argparse.RawTextHelpFormatter,
@@ -454,7 +461,25 @@ class GitCat:
         else:
             # run corresponding command - but allow shorthands
             command = options.command.replace('-','_')
-            getattr(self, command)()
+            bad_command = True
+            try:
+                getattr(self, command)()
+                bad_command = False
+
+            except AttributeError:
+                try:
+                    getattr(self, settings.command_alias[command])()
+                except KeyError:
+                    # should not ever reach this branch as argparse should give
+                    # a usage error first
+                    pass
+
+            except Exception as err:
+                error_message(f'unknown error: {err}')
+
+            if bad_command:
+                error_message(f'unrecognised command: {command}')
+
 
     @staticmethod
     def changed_files(rep):
@@ -1253,7 +1278,6 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
         of aliases from each subparser command.
         """
         inv = super()._format_action_invocation(act)
-        print(f'inv={inv}.')
         if ' (' in inv:
             return inv[:inv.index(' (')]
         return inv
