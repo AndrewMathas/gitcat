@@ -5,8 +5,7 @@
 
 *Herding a catalogue of git repositories*
 
-usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] [-m MOVETO]
-               <command> [options] ...
+usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] [-m MOVETO] <command> [options] ...
 
 Simultaneously synchronise multiple local and remote git repositories
 
@@ -33,7 +32,7 @@ Commands::
   pull              Pull all repositories from remote repositories
   push              Commit and push local repositories to remote repositories
   remote-set-ssh    Change all remote URLs to use ssh access
-  remove            Remove repository from the catalogue
+  rm                Remove repository from the catalogue
   status            Print the status of all repositories
 
 
@@ -74,6 +73,14 @@ The remote repositories are accessed in the normal way using git. Ideally, they
 will be set up with ssh access so that passwords are not required. If git
 requires a password for a repository then you will be prompted to supply it in
 the usual way.
+
+.. warning::
+   `git cat` is designed to automatically push and pull git repositories. It will
+   commit any uncomitted changes to your repositories and so should be used
+   with care. Any unintended changes to your repositories should be recoverable
+   using standard git commands. I have used `git cat` without problem since
+   2018 but there is always a chance that something may go wrong, so use at
+   your won risk.
 
 The gitcatrc file
 .................
@@ -185,8 +192,7 @@ probably be used.
 
 **git cat diff**
 
-usage: git cat diff [-h] [--name-only] [--name-status] [--numstat]
-                    [--shortstat] [--summary] [-q]
+usage: git cat diff [-h] [--name-only] [--name-status] [--numstat] [--shortstat] [--summary] [-q]
                     [repositories]
 
 Print a diff of the changes in each repository
@@ -229,8 +235,7 @@ catalogue.
 
 **git cat fetch**
 
-usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q]
-                     [repositories]
+usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q] [repositories]
 
 Fetch all repositories from remote repositories
 
@@ -330,8 +335,8 @@ their remote repository.
 
 **git cat pull**
 
-usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t]
-                    [-s <STRATEGY>] [--recursive] [--theirs] [--ours] [-q]
+usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t] [-s <STRATEGY>] [--recursive]
+                    [--theirs] [--ours] [-q]
                     [repositories]
 
 Pull all repositories from remote repositories
@@ -386,7 +391,7 @@ optional arguments:
   -h, --help     show this help message and exit
   -d, --dry-run  Do everything except actually send the updates
   --all          Push all branches
-  --prune        Remove remote branches that don't have a local counterpart
+  --prune        Remove remote branches that do not have a local counterpart
   --tags         Push all tags
   -q, --quiet    only print "important" messages
 
@@ -454,9 +459,9 @@ to:
 
 ------------
 
-**git cat remove**
+**git cat rm**
 
-usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
+usage: git cat rm [-h] [-e] [-d GIT_DIRECTORY] [-q]
 
 Remove repository from the catalogue
 

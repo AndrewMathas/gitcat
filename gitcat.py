@@ -42,6 +42,14 @@ will be set up with ssh access so that passwords are not required. If git
 requires a password for a repository then you will be prompted to supply it in
 the usual way.
 
+.. warning::
+   `git cat` is designed to automatically push and pull git repositories. It will
+   commit any uncomitted changes to your repositories and so should be used
+   with care. Any unintended changes to your repositories should be recoverable
+   using standard git commands. I have used `git cat` without problem since
+   2018 but there is always a chance that something may go wrong, so use at
+   your won risk.
+
 The gitcatrc file
 .................
 
@@ -459,7 +467,7 @@ class GitCat:
         if options.moveto is not None:
             self.moveto(options.moveto)
         else:
-            # run corresponding command - but allow shorthands
+            # run corresponding command - but allow short hands
             command = options.command.replace('-','_')
             bad_command = True
             try:

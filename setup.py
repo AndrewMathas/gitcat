@@ -40,7 +40,9 @@ settings = Settings('gitcat.ini')
 
 class BuildDoc(Command):
     r'''
-    Build the README and documentation for git-cat
+    Build the README and documentation for git-cat:
+
+    > python3 setup doc
     '''
     description = 'Build the README and manual files'
     user_options = []
@@ -98,12 +100,13 @@ class BuildDoc(Command):
         doc = __doc__.split('******')
         parser, commands = setup_command_line_parser(gitcat_settings)
         with open('README.rst', 'w', newline='\n') as readme:
-            readme.write(doc[0]) # README header
+            readme.write(doc[0].replace('Warning:', '..warning::\n')) # README header
             readme.write(parser.format_help().replace('Commands:', 'Commands::\n')+'\n')
             readme.write(self.print_help(doc[1])) # README blurb
             for cmd in commands.choices:
-                readme.write('\n------------\n\n**git cat {}**\n\n'.format(cmd))
-                readme.write(self.print_help(commands.choices[cmd].format_help()))
+                if cmd not in gitcat_settings.command_alias:
+                    readme.write('\n------------\n\n**git cat {}**\n\n'.format(cmd))
+                    readme.write(self.print_help(commands.choices[cmd].format_help()))
             readme.write(doc[2]) # README end
             readme.write('.. _`git cat`: {}'.format(settings.repository))
 
