@@ -1,3 +1,6 @@
+|version|
+|pyversion|
+|GPL3|
 
 ==========
 `git cat`_
@@ -521,15 +524,14 @@ behind the remote repository.
       M git-options.ini
       M gitcat.py
 
-
 Author
 ......
 
-Andrew Mathas
+Andrew Mathas Mathas
 
-`git cat` Version 1.0
+`git cat`_ version 1.0
 
-Copyright (C) 2018
+Copyright (C) 2018-2020
 
 ------------
 
@@ -545,7 +547,12 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 .. _bitbucket: https://bitbucket.org/
+.. _`git cat`: https://github.com/AndrewAtLarge/gitcat
 .. _github: https://github.com
 .. _GPL: http://www.gnu.org/licenses/gpl.html
 .. _Python: https://www.python.org/
-.. _`git cat`: https://bitbucket.org/AndrewsBucket/gitcat/
+.. |version| image:: https://img.shields.io/github/v/tag/AndrewAtLarge/gitcat?color=success&label=version
+.. |pyversion| image:: https://img.shields.io/badge/requires-python3.9%2B-important
+.. |GPL3| image:: https://img.shields.io/badge/license-GPLv3-blueviolet.svg
+   :target: https://www.gnu.org/licenses/gpl-3.0.en.html
+

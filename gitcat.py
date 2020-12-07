@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-r'''
+r'''|version|
+|pyversion|
+|GPL3|
+
 ==========
 `git cat`_
 ==========
@@ -63,8 +66,9 @@ The `git cat` commands are only applied to those repositories that have been
 itself in a git repository then different computers that use this file can
 synchronise different repositories using `git cat`.
 
-******
+'''
 
+r'''
 Author
 ......
 
@@ -72,7 +76,7 @@ Andrew Mathas
 
 `git cat` Version 1.0
 
-Copyright (C) 2018
+Copyright (C) 2018-2020
 
 ------------
 
@@ -86,11 +90,6 @@ later version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-.. _bitbucket: https://bitbucket.org/
-.. _github: https://github.com
-.. _GPL: http://www.gnu.org/licenses/gpl.html
-.. _Python: https://www.python.org/
 '''
 
 # flag to enable argparse autocompletion if argcomplete is installed

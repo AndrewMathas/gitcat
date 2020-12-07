@@ -16,6 +16,16 @@ r'''
 
     <Andrew.Mathas@gmail.com>
 -----------------------------------------------------------------------------------------
+
+Developer install:
+    - python3 setup.py develop
+
+Install:
+    - python3 setup.py install
+
+Build documention:
+    - python3 setup.py doc
+
 '''
 
 import os
@@ -37,6 +47,41 @@ class Settings(dict):
                     setattr(self, key.strip().lower(), val.strip())
 
 settings = Settings('gitcat.ini')
+
+LICENSE='''
+Author
+......
+
+{author} Mathas
+
+`git cat`_ version {version}
+
+Copyright (C) {copyright}
+
+------------
+
+GNU General Public License, Version 3, 29 June 2007
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License (GPL_) as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+.. _bitbucket: https://bitbucket.org/
+.. _`git cat`: {repository}
+.. _github: https://github.com
+.. _GPL: http://www.gnu.org/licenses/gpl.html
+.. _Python: https://www.python.org/
+.. |version| image:: https://img.shields.io/github/v/tag/AndrewAtLarge/gitcat?color=success&label=version
+.. |pyversion| image:: https://img.shields.io/badge/requires-python{python}%2B-important
+.. |GPL3| image:: https://img.shields.io/badge/license-GPLv3-blueviolet.svg
+   :target: https://www.gnu.org/licenses/gpl-3.0.en.html
+
+'''
 
 class BuildDoc(Command):
     r'''
@@ -100,15 +145,20 @@ class BuildDoc(Command):
         doc = __doc__.split('******')
         parser, commands = setup_command_line_parser(gitcat_settings)
         with open('README.rst', 'w', newline='\n') as readme:
-            readme.write(doc[0].replace('Warning:', '..warning::\n')) # README header
+            readme.write(doc[0]) # README header
             readme.write(parser.format_help().replace('Commands:', 'Commands::\n')+'\n')
             readme.write(self.print_help(doc[1])) # README blurb
             for cmd in commands.choices:
                 if cmd not in gitcat_settings.command_alias:
                     readme.write('\n------------\n\n**git cat {}**\n\n'.format(cmd))
                     readme.write(self.print_help(commands.choices[cmd].format_help()))
-            readme.write(doc[2]) # README end
-            readme.write('.. _`git cat`: {}'.format(settings.repository))
+            readme.write(LICENSE.format(
+                author     = settings.author,
+                copyright  = settings.copyright.split(' ')[0],
+                python     = settings.python,
+                repository = settings.repository,
+                version    = settings.version
+            ))
 
     @staticmethod
     def build_manual():
