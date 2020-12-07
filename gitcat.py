@@ -11,25 +11,25 @@ r'''|version|
 
 ******
 
-`Git cat` is a command line tool for synchronising multiple git repositories
+`git cat`_ is a command line tool for synchronising multiple git repositories
 with remote servers from the command line. This tool is not intended to be used
 on large projects with multiple developers but, instead, it is aimed at the
 lone developer who has wants to synchronise multiple git repositories that live
-on several computers. In particular, with one `git cat` command you can run git
+on several computers. In particular, with one `git cat`_ command you can run git
 commands on multiple git repositories, such as pushing or pulling from remote
 servers, such as bitbucket_ and github_. When pushing, any local changes to the
 repositories will be automatically commited.
 
-`Git cat` provides only a thin veneer over git. It does not support all git
+`git cat`_ provides only a thin veneer over git. It does not support all git
 commands and nor does it support the full functionality of those git commands
-that it does support. The `git cat` philosophy is to "do no harm" so, when
+that it does support. The `git cat`_ philosophy is to "do no harm" so, when
 possible, it uses dry-runs before changing any repository and it will only
 change a repository if the dry-run succeeds. Any problems encountered by `git
-cat` are printed to the terminal (stdout). The aim of `git cat` is to
+cat` are printed to the terminal (stdout). The aim of `git cat`_ is to
 streamline the management of multiple git repositories so, by default, it
 prints a summary of what it does to each repository to the terminal.
 
-By default, the `git cat` commands are applied to all of the repositories that
+By default, the `git cat`_ commands are applied to all of the repositories that
 are managed by `git cat`, however, repositories that the command is applied to
 by supplying a regular expression.
 
@@ -46,10 +46,10 @@ requires a password for a repository then you will be prompted to supply it in
 the usual way.
 
 .. warning::
-   `git cat` is designed to automatically push and pull git repositories. It will
+   `git cat`_ is designed to automatically push and pull git repositories. It will
    commit any uncomitted changes to your repositories and so should be used
    with care. Any unintended changes to your repositories should be recoverable
-   using standard git commands. I have used `git cat` without problem since
+   using standard git commands. I have used `git cat`_ without problem since
    2018 but there is always a chance that something may go wrong, so use at
    your won risk.
 
@@ -61,7 +61,7 @@ cat`. This file will be stored in the directory ~/.dotfiles/config, if it
 exists, and otherwise it defaults to `~/.gitcatrc`. This location of this file
 can be changed from the command line using the `-c` command line option.
 
-The `git cat` commands are only applied to those repositories that have been
+The `git cat`_ commands are only applied to those repositories that have been
 "installed" using `git cat install`. Consequently, if the gitcatrc file is
 itself in a git repository then different computers that use this file can
 synchronise different repositories using `git cat`.
@@ -74,7 +74,7 @@ Author
 
 Andrew Mathas
 
-`git cat` Version 1.0
+`git cat`_ Version 1.0
 
 Copyright (C) 2018-2020
 
