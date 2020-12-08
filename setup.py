@@ -26,6 +26,9 @@ Install:
 Build documention:
     - python3 setup.py doc
 
+Upload to PyPI:
+    - python3 setup.py sdist upload
+
 '''
 
 import os
@@ -83,6 +86,84 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 '''
 
+from gitcat import setup_command_line_parser, __doc__, settings as gitcat_settings
+
+class GitCatDoc:
+    r'''
+    A helper class for generating the GitCat documentation. There are two
+    main methods:
+
+        - readme      -- generates the README.rst file
+        - description -- generates the long description for uploading to PyPI
+
+    with the only difference being that the README file also contains a
+    description of each git cat commands. In turn, these methods call on a
+    numbewr of helper commands that generate different parts of the
+    documentation.
+    '''
+    def __init__(self):
+        self.gitcat_doc = __doc__.split('******')
+        self.parser, self.git_commands = setup_command_line_parser(gitcat_settings)
+
+    def description(self):
+        r'''
+        Return an rst string for the long description when uploading to PyPI
+        '''
+        newline = '\n'
+        return f'{self.rst_top()}{newline}{self.rst_bottom()}'
+
+    def readme(self):
+        r'''
+        Return an rst string for the README file
+        '''
+        newline = '\n'
+        return f'{self.rst_top()}{newline}{self.rst_commands()}{newline}{self.rst_bottom()}'
+
+    def print_command_help(self, command):
+        '''
+        Print the help for this command with some formatting changes.
+        Very hacky but it works...
+        '''
+        replacements = ['Example:', '*Example*:\n\n.. code-block:: bash\n',
+                        'Examples:', '*Examples*:\n\n.. code-block:: bash\n',
+                        '[STRATEGY]', '<STRATEGY>'
+        ]
+        help = self.git_commands.choices[command].format_help()
+        rep = 0
+        while rep < len(replacements):
+            help = help.replace(replacements[rep], replacements[rep+1])
+            rep += 2
+        return help
+
+    def rst_top(self):
+        r'''
+        Return a string for the top the rst file, which includes the heading
+        '''
+        newline = '\n'
+        return f'{self.gitcat_doc[0]}{newline}{self.parser.format_help().replace("Commands:", f"Commands::{newline}")}{newline}{self.gitcat_doc[1]}'
+
+    def rst_commands(self):
+        r'''
+        Return a string conrtaining a description of all of the gitcat commands.
+        '''
+        return '\n------------\n\n'.join(f'**git cat {cmd}**\n\n{self.print_command_help(cmd)}'
+                 for cmd in self.git_commands.choices if cmd not in gitcat_settings.command_alias
+        )
+
+    def rst_bottom(self):
+        r'''
+        Return a string for the bottom the rst file, which includes the licence
+        '''
+        return LICENSE.format(
+                author     = settings.author,
+                copyright  = settings.copyright.split(' ')[0],
+                python     = settings.python,
+                repository = settings.repository,
+                version    = settings.version
+        )
+
+
+
 class BuildDoc(Command):
     r'''
     Build the README and documentation for git-cat:
@@ -120,22 +201,6 @@ class BuildDoc(Command):
             except FileNotFoundError:
                 pass
 
-    @staticmethod
-    def print_help(help):
-        '''
-        Print the help for this command with some formatting changes.
-        Very hacky but it works...
-        '''
-        replacements = ['Example:', '*Example*:\n\n.. code-block:: bash\n',
-                        'Examples:', '*Examples*:\n\n.. code-block:: bash\n',
-                        '[STRATEGY]', '<STRATEGY>'
-        ]
-        rep = 0
-        while rep < len(replacements):
-            help = help.replace(replacements[rep], replacements[rep+1])
-            rep += 2
-        return help
-
     def build_readme(self):
         '''
         Construct the README.rst file from the files in the doc directory and
@@ -145,20 +210,7 @@ class BuildDoc(Command):
         doc = __doc__.split('******')
         parser, commands = setup_command_line_parser(gitcat_settings)
         with open('README.rst', 'w', newline='\n') as readme:
-            readme.write(doc[0]) # README header
-            readme.write(parser.format_help().replace('Commands:', 'Commands::\n')+'\n')
-            readme.write(self.print_help(doc[1])) # README blurb
-            for cmd in commands.choices:
-                if cmd not in gitcat_settings.command_alias:
-                    readme.write('\n------------\n\n**git cat {}**\n\n'.format(cmd))
-                    readme.write(self.print_help(commands.choices[cmd].format_help()))
-            readme.write(LICENSE.format(
-                author     = settings.author,
-                copyright  = settings.copyright.split(' ')[0],
-                python     = settings.python,
-                repository = settings.repository,
-                version    = settings.version
-            ))
+            readme.write(GitCatDoc().readme())
 
     @staticmethod
     def build_manual():
@@ -168,10 +220,11 @@ class BuildDoc(Command):
         subprocess.run('rst2html5.py README.rst README.html', shell=True)
         subprocess.run('rst2man.py README.rst man/man1/git-cat.1', shell=True)
 
+print(GitCatDoc().description())
 setup(name             = settings.program,
       version          = settings.version,
       description      = settings.description,
-      long_description = gitcat.__doc__,
+      long_description = GitCatDoc().description(),
       url              = settings.url,
       author           = settings.author,
       author_email     = settings.author_email,
@@ -182,7 +235,7 @@ setup(name             = settings.program,
       data_files       = [('man/man1', ['man/man1/git-cat.1'])],
 
       packages=find_packages(),
-      python_requires='>=3.9',
+      python_requires=f'>={settings.python}',
 
       entry_points     = {'console_scripts': ['git-cat = gitcat:main', ],},
 
@@ -194,7 +247,7 @@ setup(name             = settings.program,
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3.7+',
+        f'Programming Language :: Python :: {settings.python}',
         'Topic :: Software Development :: Version Control :: Git'
       ]
 )
