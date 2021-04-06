@@ -8,14 +8,16 @@
 
 *Herding a catalogue of git repositories*
 
-usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] [-m MOVETO] <command> [options] ...
+
+usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] [-m MOVETO]
+               <command> [options] ...
 
 Simultaneously synchronise multiple local and remote git repositories
 
 Optional arguments:
   -c CATALOGUE, --catalogue CATALOGUE
-                        specify the catalogue of git repositories (default:
-                        /Users/andrew/.dotfiles/config/gitcatrc)
+                        specify the catalogue of git repositories
+                        (default: /Users/andrew/.dotfiles/config/gitcatrc)
   -p PREFIX, --prefix PREFIX
                         Prefix directory name containing all repositories
   -q, --quiet           Print messages only if repository changes
@@ -62,10 +64,7 @@ By default, the `git cat`_ commands are applied to all of the repositories that
 are managed by `git cat`, however, repositories that the command is applied to
 by supplying a regular expression.
 
-*Examples*:
-
-.. code-block:: bash
-
+Examples:
     > git cat pull       # pull from all repositories
     > git cat pull Code  # pull from all "Code" repositories
 
@@ -98,8 +97,6 @@ The `git cat`_ commands are only applied to those repositories that have been
 itself in a git repository then different computers that use this file can
 synchronise different repositories using `git cat`.
 
-
-------------
 
 **git cat add**
 
@@ -195,7 +192,8 @@ probably be used.
 
 **git cat diff**
 
-usage: git cat diff [-h] [--name-only] [--name-status] [--numstat] [--shortstat] [--summary] [-q]
+usage: git cat diff [-h] [--name-only] [--name-status] [--numstat]
+                    [--shortstat] [--summary] [-q]
                     [repositories]
 
 Print a diff of the changes in each repository
@@ -238,7 +236,8 @@ catalogue.
 
 **git cat fetch**
 
-usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q] [repositories]
+usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q]
+                     [repositories]
 
 Fetch all repositories from remote repositories
 
@@ -338,8 +337,8 @@ their remote repository.
 
 **git cat pull**
 
-usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t] [-s <STRATEGY>] [--recursive]
-                    [--theirs] [--ours] [-q]
+usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t]
+                    [-s <STRATEGY>] [--recursive] [--theirs] [--ours] [-q]
                     [repositories]
 
 Pull all repositories from remote repositories
@@ -383,7 +382,8 @@ repository.
 
 **git cat push**
 
-usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q] [repositories]
+usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q]
+                    [repositories]
 
 Commit and push local repositories to remote repositories
 
@@ -524,12 +524,13 @@ behind the remote repository.
       M git-options.ini
       M gitcat.py
 
+
 Author
 ......
 
 Andrew Mathas Mathas
 
-`git cat`_ version 1.0
+`git cat`_ version 1.0.0
 
 Copyright (C) 2018-2020
 

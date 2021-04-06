@@ -220,11 +220,11 @@ class BuildDoc(Command):
         subprocess.run('rst2html5.py README.rst README.html', shell=True)
         subprocess.run('rst2man.py README.rst man/man1/git-cat.1', shell=True)
 
-print(GitCatDoc().description())
 setup(name             = settings.program,
       version          = settings.version,
       description      = settings.description,
       long_description = GitCatDoc().description(),
+      long_description_content_type='text/x-rst',
       url              = settings.url,
       author           = settings.author,
       author_email     = settings.author_email,
