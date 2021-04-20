@@ -1337,7 +1337,7 @@ class GitCatHelpFormatter(argparse.HelpFormatter):
 def setup_command_line_parser(settings):
     '''
     Return parsers for the command line options and the commands.
-    The function is used to parse the command-line options an to
+    The function is used to parse the command-line options and to
     automatically generate the documentation from setup.py
     '''
     # set parse the command line options using argparse
