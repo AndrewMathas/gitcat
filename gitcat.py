@@ -209,7 +209,7 @@ class Settings(dict):
         Generate all of the `git cat` command options as parsers of `commands`
         '''
         for cmd in self.commands:
-            aliases = []
+            aliases = [ self.commands[cmd]['alias'] ] if 'alias' in self.commands[cmd] else []
             for c in range(3, len(cmd)):
                 self.command_alias[cmd[:c]] = cmd
                 aliases.append(cmd[:c])
@@ -223,7 +223,7 @@ class Settings(dict):
                 epilog=self.doc_string(cmd)
             )
             for option in self.commands[cmd]:
-                if option != 'description':
+                if option not in self.special_options:
                     if 'short-option' in self.commands[cmd][option]:
                         options = self.commands[cmd][option].copy()
                         short_option = options['short-option']
@@ -270,6 +270,9 @@ class Settings(dict):
                     else:
                         setattr(self, '_' + key.lower(), val)
 
+    # list options that are not passed to git
+    special_options = ['alias', 'description']
+
     def read_git_options(self, options_file):
         '''
         Read and store the information in the command-line options file
@@ -286,6 +289,7 @@ class Settings(dict):
                 elif not line.startswith('#') and '=' in line:
 
                     choices = [c.strip() for c in line.split('=')]
+                    print(f'{line=}\n{choices=}')
                     if len(choices) == 3:
                         # initial option line for current command which is
                         # of the form: opt = <help message> = <default value>
@@ -310,15 +314,15 @@ class Settings(dict):
                         self.commands[command][opt] = option
                     elif len(choices) == 2:
                         # description of command or extra specifications for the current option
-                        if choices[0] == 'description':
-                            self.commands[command]['description'] = choices[1]
+                        if choices[0] in self.special_options:
+                            self.commands[command][choices[0]] = choices[1]
                         else:
                             try:
                                 self.commands[command][opt][choices[0]] = eval(choices[1])
-                            except (NameError, SyntaxError, TypeError):
+                            except (NameError, SyntaxError, TypeError, KeyError):
                                 self.commands[command][opt][choices[0]] = choices[1]
                     else:
-                        rror_message(f'syntax error in {options_file} on the line\n {line}')
+                        error_message(f'syntax error in {options_file} on the line\n {line}')
 
     def save_settings(self):
         r'''
@@ -463,29 +467,26 @@ class GitCat:
         # read the catalogue from the rc file
         self.read_catalogue()
 
-        if options.moveto is not None:
-            self.moveto(options.moveto)
-        else:
-            # run corresponding command - but allow short hands
-            command = options.command.replace('-','_')
-            bad_command = True
+        # run corresponding command - but allow short hands
+        command = options.command.replace('-','_')
+        bad_command = True
+        try:
+            getattr(self, command)()
+            bad_command = False
+
+        except AttributeError:
             try:
-                getattr(self, command)()
-                bad_command = False
+                getattr(self, settings.command_alias[command])()
+            except KeyError:
+                # should not ever reach this branch as argparse should give
+                # a usage error first
+                pass
 
-            except AttributeError:
-                try:
-                    getattr(self, settings.command_alias[command])()
-                except KeyError:
-                    # should not ever reach this branch as argparse should give
-                    # a usage error first
-                    pass
+        except Exception as err:
+            error_message(f'unknown error: {err}')
 
-            except Exception as err:
-                error_message(f'unknown error: {err}')
-
-            if bad_command:
-                error_message(f'unrecognised command: {command}')
+        if bad_command:
+            error_message(f'unrecognised command: {command}')
 
 
     @staticmethod
@@ -580,9 +581,15 @@ class GitCat:
             is_git_repository(self.expand_path(dire)) else '!',
             max=self.max) for dire in self.repositories())
 
-    def moveto(self, position):
+    def move(self, position):
         r'''
-        Move current repository to position `moveto` in the catalogue
+        Move current repository to position `position` in the catalogue.
+        If `position` is negative then we count from the end of the repository.
+        Therefore,
+
+            git cat move -1
+
+        moves the current repository to the end of the catalogue.
         '''
         dire = self.get_current_git_root()
         rep = Git(dire, 'remote', 'get-url --push origin')
@@ -830,7 +837,7 @@ class GitCat:
                 else:
                     self.rep_message(rep, 'not on system')
 
-    def ls(self):
+    def list(self):
         r'''
         List the repositories managed by git cat, together with the location of
         their remote repository.
@@ -981,7 +988,6 @@ class GitCat:
             if not installed_something:
                 error_message('No matching repositories found to install')
 
-
     def pull(self):
         r'''
         Run through all repositories and update them if their directories
@@ -1131,7 +1137,7 @@ class GitCat:
                 else:
                     self.rep_message(rep, 'not on system')
 
-    def rm(self):
+    def remove(self):
         r'''
         Remove the current repository to the catalogue stored in the gitcatrc
         file. An error is returned if any of the following hold:
@@ -1388,13 +1394,7 @@ def setup_command_line_parser(settings):
         action='store_true',
         default=False,
         help=argparse.SUPPRESS)
-    parser.add_argument(
-        '-m',
-        '--moveto',
-        default=None,
-        type=int,
-        help='Move repository to specified position in catalogue'
-    )
+
     parser.add_argument(
         '-v',
         '--version',
