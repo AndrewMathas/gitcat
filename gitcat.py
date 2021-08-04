@@ -289,7 +289,6 @@ class Settings(dict):
                 elif not line.startswith('#') and '=' in line:
 
                     choices = [c.strip() for c in line.split('=')]
-                    print(f'{line=}\n{choices=}')
                     if len(choices) == 3:
                         # initial option line for current command which is
                         # of the form: opt = <help message> = <default value>
