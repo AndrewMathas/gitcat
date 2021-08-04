@@ -645,6 +645,10 @@ class GitCat:
         Read the catalogue of git repositories to sync. These are stored in the
         form:
 
+           Settings:
+           ...
+
+           Catalogue:
            directory1 = repository1
            directory2 = repository2
            ...
