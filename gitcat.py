@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+# PYTHON_ARGCOMPLETE_OK
+
 r'''|version|
 |pyversion|
 |GPL3|
@@ -92,11 +95,9 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 '''
 
-# flag to enable argparse autocompletion if argcomplete is installed
-# PYTHON_ARGCOMPLETE_OK
-
 # ---------------------------------------------------------------------------
 # TODO:
+#  * print a list of git cat failures at the end so that they don't get lost
 #  - debugging and testing...
 #  - add a "git cat --set-as-defaults cmd [options]" option to set defaults
 #     for a given command and then store the information into the gitcatrc
@@ -107,7 +108,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #  - make status check that changes have been pushed
 #  - add a fast option
 #  - add exclude option
-#  - use parallel processing
+#  * use parallel processing
 #  - ? add a "git cat git" command
 #  - ? make "git cat pull" first update the repository containing the gitcatrc file and
 #     then reread it
@@ -124,7 +125,9 @@ import textwrap
 from difflib import get_close_matches
 
 try:
+    # enable argparse autocompletion if argcomplete is available
     import argcomplete
+
 except ImportError:
     argcomplete = False
 
