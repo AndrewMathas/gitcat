@@ -394,7 +394,7 @@ class Git:
      - output     the stdout and stderr output from the subprocess command
     """
 
-    def __init__(self, rep, command, options=''):
+    def __init__(self, gitcat, rep, command, options=''):
         """ run a git command and wrap the return values for later use """
         git = subprocess.run(f'git {command} {options}'.strip(), shell=True, capture_output=True)
 
@@ -404,6 +404,8 @@ class Git:
         self.command = command + ' ' + options
 
         if self.returncode != 0:
+            if rep not in gitcat.problems:
+                gitcat.problems.append(rep)
             self.error_message = '{}: there was an error using git {} {}\n  {}\n'.format(
                 rep,
                 command,
@@ -458,6 +460,7 @@ class GitCat:
         self.gitcatrc = options.catalogue
         self.options = options
         self.prefix = options.prefix
+        self.problems = []
 
         for opt in ['dry_run', 'quiet']:
             setattr(self, opt, getattr(settings, opt))
@@ -490,6 +493,20 @@ class GitCat:
         if bad_command:
             error_message(f'unrecognised command: {command}')
 
+        # print a list of any problem repositories at the end
+        if len(self.problems) == 1:
+            print(f'There was a problem with the repository {self.problems[0]}')
+        elif len(self.problems) > 1:
+            print('There were problems with the following repositories')
+            sep = '\n - '
+            print(f' - {sep.join(self.problems)}')
+
+
+    def git(self, *args):
+        '''
+        Call git using the Git class
+        '''
+        return Git(self, *args)
 
     @staticmethod
     def changed_files(rep):
@@ -497,7 +514,7 @@ class GitCat:
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
         '''
-        return Git(rep, 'diff-index', '--name-only HEAD')
+        return self.git(rep, 'diff-index', '--name-only HEAD')
 
     def commit_repository(self, rep):
         r'''
@@ -512,7 +529,7 @@ class GitCat:
             options = f'--all --message="{commit_message}"'
             if self.dry_run:
                 options += ' --porcelain' # implies --dry-run
-            return Git(rep, 'commit', options)
+            return self.git(rep, 'commit', options)
 
         return changed_files
 
@@ -565,7 +582,7 @@ class GitCat:
         if os.path.isdir(dire):
             os.chdir(dire)
             rep = dire.replace(self.prefix + '/', '')
-            is_git = Git(rep, 'rev-parse', '--is-inside-work-tree')
+            is_git = self.git(rep, 'rev-parse', '--is-inside-work-tree')
             return is_git.returncode == 0 and 'true' in is_git.output
 
         return False
@@ -833,7 +850,7 @@ class GitCat:
                 debugging('\nBRANCH ' + rep)
                 dire = self.expand_path(rep)
                 if self.is_git_repository(dire):
-                    pull = Git(rep, 'branch', options)
+                    pull = self.git(rep, 'branch', options)
                     if pull:
                         if '\n' not in pull.output:
                             self.rep_message(rep, 'already up to date')
@@ -905,7 +922,7 @@ class GitCat:
                 debugging('\nDIFFING ' + rep)
                 dire = self.expand_path(rep)
                 if self.is_git_repository(dire):
-                    diff = Git(rep, 'diff', options)
+                    diff = self.git(rep, 'diff', options)
                     if diff:
                         if diff.output != '':
                             self.rep_message(rep, diff.output.lstrip(), quiet=False)
@@ -936,7 +953,7 @@ class GitCat:
                 debugging('\nFETCHING ' + rep)
                 dire = self.expand_path(rep)
                 if self.is_git_repository(dire):
-                    pull = Git(rep, 'fetch', options)
+                    pull = self.git(rep, 'fetch', options)
                     if pull:
                         if pull.output == '':
                             self.rep_message(rep, 'already up to date')
@@ -972,10 +989,10 @@ class GitCat:
                         self.rep_message(f'git repository {dire} already exists')
                     else:
                         # initialise current repository and fetch from remote
-                        Git(rep, 'init')
-                        Git(rep, f'remote add origin {self.catalogue[rep]}')
-                        Git(rep, 'fetch origin')
-                        Git(rep, 'checkout -b master --track origin/master')
+                        self.git(rep, 'init')
+                        self.git(rep, f'remote add origin {self.catalogue[rep]}')
+                        self.git(rep, 'fetch origin')
+                        self.git(rep, 'checkout -b master --track origin/master')
                         installed_something = True
 
                 else:
@@ -984,7 +1001,7 @@ class GitCat:
                     os.makedirs(parent, exist_ok=True)
                     os.chdir(parent)
                     if not self.dry_run:
-                        install = Git(rep, 'clone', f'--quiet {self.catalogue[rep]} {os.path.basename(dire)}')
+                        install = self.git(rep, 'clone', f'--quiet {self.catalogue[rep]} {os.path.basename(dire)}')
                         if install:
                             installed_something = True
                             self.message(' - done!')
@@ -1020,7 +1037,7 @@ class GitCat:
                 debugging('\nPULLING ' + rep)
                 dire = self.expand_path(rep)
                 if self.is_git_repository(dire):
-                    pull = Git(rep, 'pull', options)
+                    pull = self.git(rep, 'pull', options)
                     if pull:
                         if pull.output == '':
                             self.rep_message(rep, 'already up to date')
@@ -1072,12 +1089,12 @@ class GitCat:
                     if commit:
                         if commit.output != '':
                             self.rep_message(rep, 'commit\n' + commit.output)
-                        ahead = Git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
+                        ahead = self.git(rep, 'for-each-ref', r'--format="%(refname:short) %(upstream:track)" refs/heads')
                         if ahead:
                             if 'ahead' not in ahead.output:
                                 self.rep_message(rep, 'up to date')
                             elif not self.dry_run:
-                                push = Git(rep, 'push', options)
+                                push = self.git(rep, 'push', options)
 
                                 if push:
                                     if push.output.startswith('  To ') and push.output.endswith('Done'):
@@ -1121,7 +1138,7 @@ class GitCat:
                 debugging('\nCONVERT-TO-SSH ' + rep)
                 dire = self.expand_path(rep)
                 if self.is_git_repository(dire):
-                    remote = Git(rep, 'remote', '-v')
+                    remote = self.git(rep, 'remote', '-v')
                     changed = [] # avoid duplicates by keeping a list of remotes that have already been changed
                     if remote:
                         if 'https://' in remote.output:
@@ -1133,7 +1150,7 @@ class GitCat:
                                 https = remotes[r+1] # a https string as above
                                 if remotes[r] not in changed and '@' in https:
                                     ssh = 'git'+https[https.index('@'):].replace('/',':',1)
-                                    changing = Git(rep, 'remote', f'set-url {remotes[r]} {ssh}')
+                                    changing = self.git(rep, 'remote', f'set-url {remotes[r]} {ssh}')
                                     if changing:
                                         self.rep_message(rep, 'changed to ssh access')
                                         changed.append(remotes[r])
@@ -1209,11 +1226,11 @@ class GitCat:
                 if self.is_git_repository(dire):
 
                     # update with remote, unless local is true
-                    remote = self.options.git_local or Git(rep, 'remote', 'update')
+                    remote = self.options.git_local or self.git(rep, 'remote', 'update')
 
                     if remote:
                         # use status to work out relative changes
-                        status = Git(rep, 'status', status_options)
+                        status = self.git(rep, 'status', status_options)
                         if status:
                             changes = ahead_behind.search(status.output)
                             changes = '' if changes is None else changes.group()[1:-1]
@@ -1225,7 +1242,7 @@ class GitCat:
                                 status.output = ''
 
                             # use diff to work out which files have changed
-                            diff = Git(rep, 'diff', diff_options)
+                            diff = self.git(rep, 'diff', diff_options)
                             changed = ''
                             if diff:
                                 changed = files_changed.search(diff.output)
