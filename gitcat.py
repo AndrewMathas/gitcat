@@ -488,6 +488,7 @@ class GitCat:
                 pass
 
         except Exception as err:
+            raise
             error_message(f'unknown error: {err}')
 
         if bad_command:
@@ -508,8 +509,7 @@ class GitCat:
         '''
         return Git(self, *args)
 
-    @staticmethod
-    def changed_files(rep):
+    def changed_files(self, rep):
         r'''
         Return list of files repository in the current directory that have
         changed.  We assume that we are in a git repository.
