@@ -54,14 +54,15 @@ the usual way.
    with care. Any unintended changes to your repositories should be recoverable
    using standard git commands. I have used `git cat`_ without problem since
    2018 but there is always a chance that something may go wrong, so use at
-   your won risk.
+   your own risk.
 
 The gitcatrc file
 .................
 
 The gitcatrc file contains the catalogue of repositories maintained by `git
-cat`. This file will be stored in the directory ~/.dotfiles/config, if it
-exists, and otherwise it defaults to `~/.gitcatrc`. This location of this file
+cat`. By default, the rc file is be stored as
+$XDG_CONFIG_HOME/config/gitcatrc, if the $XDG_CONFIG_HOME directory exists,
+exists, and otherwise it is stored as `~/.gitcatrc`. This location of this file
 can be changed from the command line using the `-c` command line option.
 
 The `git cat`_ commands are only applied to those repositories that have been
@@ -178,12 +179,17 @@ class Settings(dict):
         # store a dictionary of aliases for the git cat command
         self.command_alias = {}
 
-        # location of the gitcatrc file defaults to ~/.dotfiles/config/gitcatrc
+        # location of the gitcatrc file defaults to $XDG_CONFIG_HOME/config/gitcatrc
         # and then to ~/.gitcatrc
-        if os.path.isdir(os.path.expanduser('~/.dotfiles/config')):
-            self.rc_file = os.path.expanduser('~/.dotfiles/config/gitcatrc')
-        if not (os.path.isfile(self.rc_file) or hasattr(self, 'rc_file')):
-            self.rc_file = os.path.expanduser('~/.gitcatrc')
+        self.rc_file = os.path.expanduser('~/.gitcatrc')
+        try:
+            xdg = os.environ['XDG_CONFIG_HOME']
+            if os.path.isdir(xdg):
+                os.makedirs(os.path.join(xdg, 'config'), exist_ok = True)
+                self.rc_file = os.path.join(xdg, 'config', 'gitcatrc')
+
+        except (KeyError, IOError):
+            pass
 
         # read gitcat ini file, which gives data about gitcat
         self.read_ini_file(ini_file)
@@ -348,6 +354,12 @@ settings = Settings(file('gitcat.ini'), file('git-options.ini'))
 
 
 # ---------------------------------------------------------------------------
+def red_text(txt):
+    ''' print `txt` in red! '''
+    return '\033[31m' + str(txt) + '\033[30m'
+
+
+# ---------------------------------------------------------------------------
 # error messages and debugging
 def error_message(err):
     r'''
@@ -462,6 +474,8 @@ class GitCat:
         self.prefix = options.prefix
         self.problems = []
 
+        debugging(f'{options=}')
+
         for opt in ['dry_run', 'quiet']:
             setattr(self, opt, getattr(settings, opt))
             if hasattr(options, opt):
@@ -496,11 +510,11 @@ class GitCat:
 
         # print a list of any problem repositories at the end
         if len(self.problems) == 1:
-            print(f'There was a problem with the repository {self.problems[0]}')
+            print(f'There was a problem with the repository {red_text(self.problems[0])}')
         elif len(self.problems) > 1:
             print('There were problems with the following repositories')
             sep = '\n - '
-            print(f' - {sep.join(self.problems)}')
+            print(f' - {sep.join(red_text(p) for p in self.problems)}')
 
 
     def git(self, *args):
@@ -567,7 +581,7 @@ class GitCat:
 
         # find the root directory for the repository and the remote URL`
         os.chdir(dire)
-        root = Git(dire, 'root')
+        root = self.git(dire, 'root')
         if not root:
             error_message(f'{dire} is not a git repository:\n  {root.output}')
         return root
@@ -611,7 +625,7 @@ class GitCat:
         moves the current repository to the end of the catalogue.
         '''
         dire = self.get_current_git_root()
-        rep = Git(dire, 'remote', 'get-url --push origin')
+        rep = self.git(dire, 'remote', 'get-url --push origin')
         if not rep:
             error_message(f'Unable to find remote repository for {dire}')
         dire = self.short_path(dire.output.strip())
@@ -799,7 +813,7 @@ class GitCat:
         '''
         dire = self.get_current_git_root()
 
-        rep = Git(dire, 'remote', 'get-url --push origin')
+        rep = self.git(dire, 'remote', 'get-url --push origin')
         if not rep:
             error_message(f'Unable to find remote repository for {dire}')
 
@@ -818,7 +832,7 @@ class GitCat:
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(dire, 'commit', '--all --message="{}"'.format(f'Adding {dire} to gitcatrc'))
+                self.git(dire, 'commit', '--all --message="{}"'.format(f'Adding {dire} to gitcatrc'))
 
     def branch(self):
         r'''
@@ -1172,7 +1186,7 @@ class GitCat:
 
         '''
         dire = self.get_current_git_root()
-        rep = Git(dire, 'remote', 'get-url --push origin')
+        rep = self.git(dire, 'remote', 'get-url --push origin')
 
         if not rep:
             error_message(f'Unable to find remote repository for {dire}')
@@ -1194,7 +1208,7 @@ class GitCat:
             # add a commit message
             catdir = os.path.dirname(self.gitcatrc)
             if self.is_git_repository(catdir):
-                Git(dire, 'commit', '--all --message "{}"'.format(f'Removing {dire} from gitcatrc'))
+                self.git(dire, 'commit', '--all --message "{}"'.format(f'Removing {dire} from gitcatrc'))
 
     def status(self):
         r'''
