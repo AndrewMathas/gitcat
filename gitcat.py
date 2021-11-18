@@ -21,7 +21,7 @@ lone developer who has wants to synchronise multiple git repositories that live
 on several computers. In particular, with one `git cat`_ command you can run git
 commands on multiple git repositories, such as pushing or pulling from remote
 servers, such as bitbucket_ and github_. When pushing, any local changes to the
-repositories will be automatically commited.
+repositories will be automatically committed.
 
 `git cat`_ provides only a thin veneer over git. It does not support all git
 commands and nor does it support the full functionality of those git commands
@@ -220,12 +220,12 @@ class Settings(dict):
         for cmd in self.commands:
             aliases = [ self.commands[cmd]['alias'] ] if 'alias' in self.commands[cmd] else []
             for c in range(3, len(cmd)):
-                self.command_alias[cmd[:c]] = cmd
+                #self.command_alias[cmd[:c]] = cmd
                 aliases.append(cmd[:c])
 
             command = commands.add_parser(
                 cmd,
-                aliases=aliases,
+                aliases=aliases.copy(),
                 help=self.commands[cmd]['description'],
                 description=self.commands[cmd]['description'],
                 formatter_class=argparse.RawTextHelpFormatter,
