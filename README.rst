@@ -9,21 +9,17 @@
 *Herding a catalogue of git repositories*
 
 
-usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] [-m MOVETO]
-               <command> [options] ...
+usage: git cat [-c CATALOGUE] [-p PREFIX] [-q] [-h] <command> [options] ...
 
 Simultaneously synchronise multiple local and remote git repositories
 
 Optional arguments:
   -c CATALOGUE, --catalogue CATALOGUE
-                        specify the catalogue of git repositories
-                        (default: /Users/andrew/.dotfiles/config/gitcatrc)
+                        specify the catalogue of git repositories (default: /Users/andrew/.dotfiles/config/gitcatrc)
   -p PREFIX, --prefix PREFIX
                         Prefix directory name containing all repositories
   -q, --quiet           Print messages only if repository changes
   -h, --help            help: for extended help use -hh and -hhh
-  -m MOVETO, --moveto MOVETO
-                        Move repository to specified position in catalogue
 
 Commands::
 
@@ -33,11 +29,12 @@ Commands::
   diff              Print a diff of the changes in each repository
   fetch             Fetch all repositories from remote repositories
   install           Install repository from the catalogue
-  ls                List all repositories in the catalogue
+  list              List all repositories in the catalogue
+  move              Move repository to specified position in catalogue'
   pull              Pull all repositories from remote repositories
-  push              Commit and push local repositories to remote repositories
+  push              Commit and push local repositories to their remotes
   remote-set-ssh    Change all remote URLs to use ssh access
-  rm                Remove repository from the catalogue
+  remove            Remove repository from the catalogue
   status            Print the status of all repositories
 
 
@@ -49,7 +46,7 @@ lone developer who has wants to synchronise multiple git repositories that live
 on several computers. In particular, with one `git cat`_ command you can run git
 commands on multiple git repositories, such as pushing or pulling from remote
 servers, such as bitbucket_ and github_. When pushing, any local changes to the
-repositories will be automatically commited.
+repositories will be automatically committed.
 
 `git cat`_ provides only a thin veneer over git. It does not support all git
 commands and nor does it support the full functionality of those git commands
@@ -82,14 +79,15 @@ the usual way.
    with care. Any unintended changes to your repositories should be recoverable
    using standard git commands. I have used `git cat`_ without problem since
    2018 but there is always a chance that something may go wrong, so use at
-   your won risk.
+   your own risk.
 
 The gitcatrc file
 .................
 
 The gitcatrc file contains the catalogue of repositories maintained by `git
-cat`. This file will be stored in the directory ~/.dotfiles/config, if it
-exists, and otherwise it defaults to `~/.gitcatrc`. This location of this file
+cat`. By default, the rc file is be stored as
+$XDG_CONFIG_HOME/config/gitcatrc, if the $XDG_CONFIG_HOME directory exists,
+exists, and otherwise it is stored as `~/.gitcatrc`. This location of this file
 can be changed from the command line using the `-c` command line option.
 
 The `git cat`_ commands are only applied to those repositories that have been
@@ -160,7 +158,205 @@ repositories managed by git cat.
 
 ------------
 
+**git cat bra**
+
+usage: git cat branch [-h] [-q] [repositories]
+
+Print status of all branches in each repository
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Run `git branch --verbose` in selected repositories in the
+catalogue. This gives a summary of the status of the branches in the
+repositories managed by git cat.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat branch Code
+    Code/Project1
+      python3 6c2fcd5 Putting out the washing
+    Code/Project2
+      master  2d2614e [ahead 1] Making some important changes
+    Code/Project3        already up to date
+    Code/Project4        already up to date
+    Code/Project5
+      branch1 14fc541 Adding braid method to tableau
+      * branch2       68480a4 git cat: updating   doc/README.rst
+      master             862e2f4 Adding good stuff
+    Code/Project6            already up to date
+
+------------
+
+**git cat bran**
+
+usage: git cat branch [-h] [-q] [repositories]
+
+Print status of all branches in each repository
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Run `git branch --verbose` in selected repositories in the
+catalogue. This gives a summary of the status of the branches in the
+repositories managed by git cat.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat branch Code
+    Code/Project1
+      python3 6c2fcd5 Putting out the washing
+    Code/Project2
+      master  2d2614e [ahead 1] Making some important changes
+    Code/Project3        already up to date
+    Code/Project4        already up to date
+    Code/Project5
+      branch1 14fc541 Adding braid method to tableau
+      * branch2       68480a4 git cat: updating   doc/README.rst
+      master             862e2f4 Adding good stuff
+    Code/Project6            already up to date
+
+------------
+
+**git cat branc**
+
+usage: git cat branch [-h] [-q] [repositories]
+
+Print status of all branches in each repository
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Run `git branch --verbose` in selected repositories in the
+catalogue. This gives a summary of the status of the branches in the
+repositories managed by git cat.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat branch Code
+    Code/Project1
+      python3 6c2fcd5 Putting out the washing
+    Code/Project2
+      master  2d2614e [ahead 1] Making some important changes
+    Code/Project3        already up to date
+    Code/Project4        already up to date
+    Code/Project5
+      branch1 14fc541 Adding braid method to tableau
+      * branch2       68480a4 git cat: updating   doc/README.rst
+      master             862e2f4 Adding good stuff
+    Code/Project6            already up to date
+
+------------
+
 **git cat commit**
+
+usage: git cat commit [-h] [-a] [-b] [-d] [-v] [-q] [repositories]
+
+Commit changes in all repositories
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -a, --all      automatically stage files that have been modified and deleted
+  -b, --branch   Show the branch and tracking information
+  -d, --dry-run  Show what would be committed without committing
+  -v, --verbose  Print a unified diff for the commit
+  -q, --quiet    only print "important" messages
+
+Commit all changes in the selected repositories in the catalogue. The
+commit message will list the files that were changed. This command is
+provided mainly for completeness and, instead, `git cat push` would
+probably be used.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat commit
+
+------------
+
+**git cat com**
+
+usage: git cat commit [-h] [-a] [-b] [-d] [-v] [-q] [repositories]
+
+Commit changes in all repositories
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -a, --all      automatically stage files that have been modified and deleted
+  -b, --branch   Show the branch and tracking information
+  -d, --dry-run  Show what would be committed without committing
+  -v, --verbose  Print a unified diff for the commit
+  -q, --quiet    only print "important" messages
+
+Commit all changes in the selected repositories in the catalogue. The
+commit message will list the files that were changed. This command is
+provided mainly for completeness and, instead, `git cat push` would
+probably be used.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat commit
+
+------------
+
+**git cat comm**
+
+usage: git cat commit [-h] [-a] [-b] [-d] [-v] [-q] [repositories]
+
+Commit changes in all repositories
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -a, --all      automatically stage files that have been modified and deleted
+  -b, --branch   Show the branch and tracking information
+  -d, --dry-run  Show what would be committed without committing
+  -v, --verbose  Print a unified diff for the commit
+  -q, --quiet    only print "important" messages
+
+Commit all changes in the selected repositories in the catalogue. The
+commit message will list the files that were changed. This command is
+provided mainly for completeness and, instead, `git cat push` would
+probably be used.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat commit
+
+------------
+
+**git cat commi**
 
 usage: git cat commit [-h] [-a] [-b] [-d] [-v] [-q] [repositories]
 
@@ -192,9 +388,49 @@ probably be used.
 
 **git cat diff**
 
-usage: git cat diff [-h] [--name-only] [--name-status] [--numstat]
-                    [--shortstat] [--summary] [-q]
-                    [repositories]
+usage: git cat diff [-h] [--name-only] [--name-status] [--numstat] [--shortstat] [--summary] [-q] [repositories]
+
+Print a diff of the changes in each repository
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  --name-only    Show only names of changed files
+  --name-status  Show only names and status of changed files
+  --numstat      Show number of added and deleted lines without abbreviating
+  --shortstat    Print number of modified files and number of added/deleted line
+  --summary      Print condensed summary of changes
+  -q, --quiet    only print "important" messages
+
+Run git diff with various options on the repositories in the
+catalogue.
+
+*Example*:
+
+.. code-block:: bash
+
+
+    > git cat diff Code
+    Code/Project1  up to date
+    Code/Project2  up to date
+    Code/GitCat    diff --git c/gitcat.py w/gitcat.py
+    index b32a07f..c32a435 100644
+    --- c/gitcat.py
+    +++ w/gitcat.py
+    @@ -29,16 +29,25 @@ *Examples*:
+
+.. code-block:: bash
+
+    -gitcatrc:
+    +The gitcatrc file:
+
+------------
+
+**git cat dif**
+
+usage: git cat diff [-h] [--name-only] [--name-status] [--numstat] [--shortstat] [--summary] [-q] [repositories]
 
 Print a diff of the changes in each repository
 
@@ -236,8 +472,79 @@ catalogue.
 
 **git cat fetch**
 
-usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q]
-                     [repositories]
+usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q] [repositories]
+
+Fetch all repositories from remote repositories
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  --all         Fetch all branches
+  --dry-run     Print what would be done without doing it
+  -f, --force   Fetch even if there are changes
+  -p, --prune   Before fetching, remove any remote-tracking references that no longer exist on the remote
+  -t, --tags    Fetch all tags from remote repositories
+  -q, --quiet   only print "important" messages
+
+Run `git fetch -q --progress` on the installed git cat repositories.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat fetch
+    Rep1  already up to date
+    Rep2  already up to date
+    Rep3  remote: Counting objects: 3, done.
+      remote: Compressing objects:  33% (1/3)
+      remote: Compressing objects:  66% (2/3)
+      remote: Compressing objects: 100% (3/3)
+      remote: Compressing objects: 100% (3/3), done.
+      remote: Total 3 (delta 2), reused 0 (delta 0)
+
+------------
+
+**git cat fet**
+
+usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q] [repositories]
+
+Fetch all repositories from remote repositories
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  --all         Fetch all branches
+  --dry-run     Print what would be done without doing it
+  -f, --force   Fetch even if there are changes
+  -p, --prune   Before fetching, remove any remote-tracking references that no longer exist on the remote
+  -t, --tags    Fetch all tags from remote repositories
+  -q, --quiet   only print "important" messages
+
+Run `git fetch -q --progress` on the installed git cat repositories.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat fetch
+    Rep1  already up to date
+    Rep2  already up to date
+    Rep3  remote: Counting objects: 3, done.
+      remote: Compressing objects:  33% (1/3)
+      remote: Compressing objects:  66% (2/3)
+      remote: Compressing objects: 100% (3/3)
+      remote: Compressing objects: 100% (3/3), done.
+      remote: Total 3 (delta 2), reused 0 (delta 0)
+
+------------
+
+**git cat fetc**
+
+usage: git cat fetch [-h] [--all] [--dry-run] [-f] [-p] [-t] [-q] [repositories]
 
 Fetch all repositories from remote repositories
 
@@ -304,9 +611,141 @@ repositories managed by git cat.abs
 
 ------------
 
-**git cat ls**
+**git cat ins**
 
-usage: git cat ls [-h] [-q] [repositories]
+usage: git cat install [-h] [-d] [-q] [repositories]
+
+Install repository from the catalogue
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -d, --dry-run  Do everything except actually install the repositories
+  -q, --quiet    only print "important" messages
+
+Install listed repositories from the catalogue.
+
+If a directory exists but is not a git repository then initialise the
+repository and fetch from the remote.
+
+By default all repositories are installed, however, by specifying a
+regular expression for the repositories you can install a subset of the
+repositories managed by git cat.abs
+
+*Examples*:
+
+.. code-block:: bash
+
+
+    > git cat install       # install all repositories managed by git cat
+    > git cat install Code  # install all "Code" repositories managed by git cat
+
+------------
+
+**git cat inst**
+
+usage: git cat install [-h] [-d] [-q] [repositories]
+
+Install repository from the catalogue
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -d, --dry-run  Do everything except actually install the repositories
+  -q, --quiet    only print "important" messages
+
+Install listed repositories from the catalogue.
+
+If a directory exists but is not a git repository then initialise the
+repository and fetch from the remote.
+
+By default all repositories are installed, however, by specifying a
+regular expression for the repositories you can install a subset of the
+repositories managed by git cat.abs
+
+*Examples*:
+
+.. code-block:: bash
+
+
+    > git cat install       # install all repositories managed by git cat
+    > git cat install Code  # install all "Code" repositories managed by git cat
+
+------------
+
+**git cat insta**
+
+usage: git cat install [-h] [-d] [-q] [repositories]
+
+Install repository from the catalogue
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -d, --dry-run  Do everything except actually install the repositories
+  -q, --quiet    only print "important" messages
+
+Install listed repositories from the catalogue.
+
+If a directory exists but is not a git repository then initialise the
+repository and fetch from the remote.
+
+By default all repositories are installed, however, by specifying a
+regular expression for the repositories you can install a subset of the
+repositories managed by git cat.abs
+
+*Examples*:
+
+.. code-block:: bash
+
+
+    > git cat install       # install all repositories managed by git cat
+    > git cat install Code  # install all "Code" repositories managed by git cat
+
+------------
+
+**git cat instal**
+
+usage: git cat install [-h] [-d] [-q] [repositories]
+
+Install repository from the catalogue
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -d, --dry-run  Do everything except actually install the repositories
+  -q, --quiet    only print "important" messages
+
+Install listed repositories from the catalogue.
+
+If a directory exists but is not a git repository then initialise the
+repository and fetch from the remote.
+
+By default all repositories are installed, however, by specifying a
+regular expression for the repositories you can install a subset of the
+repositories managed by git cat.abs
+
+*Examples*:
+
+.. code-block:: bash
+
+
+    > git cat install       # install all repositories managed by git cat
+    > git cat install Code  # install all "Code" repositories managed by git cat
+
+------------
+
+**git cat list**
+
+usage: git cat list [-h] [-q] [repositories]
 
 List all repositories in the catalogue
 
@@ -335,10 +774,186 @@ their remote repository.
 
 ------------
 
+**git cat ls**
+
+usage: git cat list [-h] [-q] [repositories]
+
+List all repositories in the catalogue
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+List the repositories managed by git cat, together with the location of
+their remote repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat ls
+    Code/Project1  = git@bitbucket.org:AndrewsBucket/prog1.git
+    Code/Project2  = git@bitbucket.org:AndrewsBucket/prog2.git
+    Code/Project3  = git@bitbucket.org:AndrewsBucket/prog3.git
+    Code/Project4  = git@bitbucket.org:AndrewsBucket/prog4.git
+    Code/GitCat    = git@gitgithub.com:AndrewMathas/gitcat.git
+    Notes/Life     = git@gitgithub.com:AndrewMathas/life.git
+    Stuff          = git@some.random.rep.com:Me/stuffing.git
+
+------------
+
+**git cat lis**
+
+usage: git cat list [-h] [-q] [repositories]
+
+List all repositories in the catalogue
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+List the repositories managed by git cat, together with the location of
+their remote repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat ls
+    Code/Project1  = git@bitbucket.org:AndrewsBucket/prog1.git
+    Code/Project2  = git@bitbucket.org:AndrewsBucket/prog2.git
+    Code/Project3  = git@bitbucket.org:AndrewsBucket/prog3.git
+    Code/Project4  = git@bitbucket.org:AndrewsBucket/prog4.git
+    Code/GitCat    = git@gitgithub.com:AndrewMathas/gitcat.git
+    Notes/Life     = git@gitgithub.com:AndrewMathas/life.git
+    Stuff          = git@some.random.rep.com:Me/stuffing.git
+
+------------
+
+**git cat move**
+
+usage: git cat move [-h] [-q] [repositories]
+
+Move repository to specified position in catalogue'
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Move current repository to position `position` in the catalogue.
+If `position` is negative then we count from the end of the repository.
+Therefore,
+
+    git cat move -1
+
+moves the current repository to the end of the catalogue.
+
+------------
+
+**git cat mv**
+
+usage: git cat move [-h] [-q] [repositories]
+
+Move repository to specified position in catalogue'
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Move current repository to position `position` in the catalogue.
+If `position` is negative then we count from the end of the repository.
+Therefore,
+
+    git cat move -1
+
+moves the current repository to the end of the catalogue.
+
+------------
+
+**git cat mov**
+
+usage: git cat move [-h] [-q] [repositories]
+
+Move repository to specified position in catalogue'
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Move current repository to position `position` in the catalogue.
+If `position` is negative then we count from the end of the repository.
+Therefore,
+
+    git cat move -1
+
+moves the current repository to the end of the catalogue.
+
+------------
+
 **git cat pull**
 
-usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t]
-                    [-s <STRATEGY>] [--recursive] [--theirs] [--ours] [-q]
+usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t] [-s <STRATEGY>] [--recursive] [--theirs]
+                    [--ours] [-q]
+                    [repositories]
+
+Pull all repositories from remote repositories
+
+positional arguments:
+  repositories          optionally filter repositories for status
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --all                 Pull all branches
+  -d, --dry-run         Print what would be done without doing it
+  --ff-only             Fast-forward only merge
+  --squash              Squash the merge
+  --stat                Show a diffstat at the end of the merge
+  -t, --tags            Fetch all tags from remote repositories
+  -s <STRATEGY>, --strategy <STRATEGY>
+                        Use the specified merge strategy
+  --recursive           Use recursive three-way merge
+  --theirs              Resolve merge conflicts favouring remote repository
+  --ours                Resolve merge conflicts favouring local repository
+  -q, --quiet           only print "important" messages
+
+Run through all repositories and update them if their directories
+already exist on this computer. Unless the  `--quiet` option is used,
+a message is printed to give the summarise the status of the
+repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat pull
+    Code/Project1  already up to date
+    Code/Project2  already up to date
+    Code/GitCat    already up to date
+      remote: Counting objects: 8, done.
+      remote: Total 8 (delta 6), reused 0 (delta 0)
+    Notes/Life     already up to date
+
+------------
+
+**git cat pul**
+
+usage: git cat pull [-h] [--all] [-d] [--ff-only] [--squash] [--stat] [-t] [-s <STRATEGY>] [--recursive] [--theirs]
+                    [--ours] [-q]
                     [repositories]
 
 Pull all repositories from remote repositories
@@ -382,10 +997,54 @@ repository.
 
 **git cat push**
 
-usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q]
-                    [repositories]
+usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q] [repositories]
 
-Commit and push local repositories to remote repositories
+Commit and push local repositories to their remotes
+
+positional arguments:
+  repositories   optionally filter repositories for status
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -d, --dry-run  Do everything except actually send the updates
+  --all          Push all branches
+  --prune        Remove remote branches that do not have a local counterpart
+  --tags         Push all tags
+  -q, --quiet    only print "important" messages
+
+Run through all installed repositories and push them to their remote
+repositories. Any uncommitted repository with local changes will be
+committed and the commit message listing the files that have changed.
+Unless the `-quiet` option is used, a summary of the status of
+each repository is printed with each push.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat push
+    Code/Project1  pushed
+      To bitbucket.org:AndrewsBucket/dotfiles.git
+      refs/heads/master:refs/heads/master	e128dd9..904f96a
+      Done
+    Code/Project2  up to date
+    Code/Project3  up to date
+    Code/Project4  up to date
+    Code/GitCat    commit
+      [master 442822d] git cat: updating   gitcat.py
+      1 file changed, 44 insertions(+), 5 deletions(-)
+      To bitbucket.org:AndrewsBucket/gitcat.git
+      refs/heads/master:refs/heads/master	6ffeb9d..442822d
+      Done
+    Notes/Life     up to date
+
+------------
+
+**git cat pus**
+
+usage: git cat push [-h] [-d] [--all] [--prune] [--tags] [-q] [repositories]
+
+Commit and push local repositories to their remotes
 
 positional arguments:
   repositories   optionally filter repositories for status
@@ -462,9 +1121,437 @@ to:
 
 ------------
 
+**git cat rem**
+
+usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
+
+Remove repository from the catalogue
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --everything      Delete everything, including the directory
+  -d GIT_DIRECTORY, --directory GIT_DIRECTORY
+                        Remove repository from specified directory
+  -q, --quiet           only print "important" messages
+
+Remove the current repository to the catalogue stored in the gitcatrc
+file. An error is returned if any of the following hold:
+- the current directory is not in the git cat catalogue
+- the current directory is not contained in a git repository
+
+*Example*:
+
+.. code-block:: bash
+
+    git cat remove  # remove the current directory to the catalogue
+
+------------
+
+**git cat remo**
+
+usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
+
+Remove repository from the catalogue
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --everything      Delete everything, including the directory
+  -d GIT_DIRECTORY, --directory GIT_DIRECTORY
+                        Remove repository from specified directory
+  -q, --quiet           only print "important" messages
+
+Remove the current repository to the catalogue stored in the gitcatrc
+file. An error is returned if any of the following hold:
+- the current directory is not in the git cat catalogue
+- the current directory is not contained in a git repository
+
+*Example*:
+
+.. code-block:: bash
+
+    git cat remove  # remove the current directory to the catalogue
+
+------------
+
+**git cat remot**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-s**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-se**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-set**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-set-**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-set-s**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remote-set-ss**
+
+usage: git cat remote-set-ssh [-h] [-q] [repositories]
+
+Change all remote URLs to use ssh access
+
+positional arguments:
+  repositories  optionally filter repositories for status
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -q, --quiet   only print "important" messages
+
+Make the URLs of all repositories use SSH access (rather than HHTPS).
+This is useful because it allows password-less once the user's public
+key has been uploaded to the remote repository.
+
+This involves changing the remote URL from something like:
+
+    https://AndrewsBucket@bitbucket.org/AndrewsBucket/webquiz.git
+
+to:
+
+    git@bitbucket.org:AndrewsBucket/webquiz.git
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat remote-set-ssh
+    Code/Project1  unchanged
+    Code/Project2  changed to ssh access
+    Code/Project3  unchanged
+
+------------
+
+**git cat remove**
+
+usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
+
+Remove repository from the catalogue
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --everything      Delete everything, including the directory
+  -d GIT_DIRECTORY, --directory GIT_DIRECTORY
+                        Remove repository from specified directory
+  -q, --quiet           only print "important" messages
+
+Remove the current repository to the catalogue stored in the gitcatrc
+file. An error is returned if any of the following hold:
+- the current directory is not in the git cat catalogue
+- the current directory is not contained in a git repository
+
+*Example*:
+
+.. code-block:: bash
+
+    git cat remove  # remove the current directory to the catalogue
+
+------------
+
 **git cat rm**
 
-usage: git cat rm [-h] [-e] [-d GIT_DIRECTORY] [-q]
+usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
+
+Remove repository from the catalogue
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e, --everything      Delete everything, including the directory
+  -d GIT_DIRECTORY, --directory GIT_DIRECTORY
+                        Remove repository from specified directory
+  -q, --quiet           only print "important" messages
+
+Remove the current repository to the catalogue stored in the gitcatrc
+file. An error is returned if any of the following hold:
+- the current directory is not in the git cat catalogue
+- the current directory is not contained in a git repository
+
+*Example*:
+
+.. code-block:: bash
+
+    git cat remove  # remove the current directory to the catalogue
+
+------------
+
+**git cat remov**
+
+usage: git cat remove [-h] [-e] [-d GIT_DIRECTORY] [-q]
 
 Remove repository from the catalogue
 
@@ -524,15 +1611,129 @@ behind the remote repository.
       M git-options.ini
       M gitcat.py
 
+------------
+
+**git cat sta**
+
+usage: git cat status [-h] [-l] [-u CHOICE] [-q] [repositories]
+
+Print the status of all repositories
+
+positional arguments:
+  repositories          optionally filter repositories for status
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l, --local           Only compare with local repositories
+  -u CHOICE, --untracked-files CHOICE
+                        Show untracked files using git status mode (all, no, or normal)
+  -q, --quiet           only print "important" messages
+
+Print a summary of the status of all of the repositories in the
+catalogue. The name is slightly misleading as this command does not
+just run `git status` on each repository and, instead, it queries the
+remote repositories to determine whether each repository is ahead or
+behind the remote repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat status Code
+    Code/Project1  up to date
+    Code/Project2  ahead 1
+    Code/Project3  up to date
+    Code/Project4  behind 1
+    Code/GitCat    uncommitted changes in 3 files
+      M README.rst
+      M git-options.ini
+      M gitcat.py
+
+------------
+
+**git cat stat**
+
+usage: git cat status [-h] [-l] [-u CHOICE] [-q] [repositories]
+
+Print the status of all repositories
+
+positional arguments:
+  repositories          optionally filter repositories for status
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l, --local           Only compare with local repositories
+  -u CHOICE, --untracked-files CHOICE
+                        Show untracked files using git status mode (all, no, or normal)
+  -q, --quiet           only print "important" messages
+
+Print a summary of the status of all of the repositories in the
+catalogue. The name is slightly misleading as this command does not
+just run `git status` on each repository and, instead, it queries the
+remote repositories to determine whether each repository is ahead or
+behind the remote repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat status Code
+    Code/Project1  up to date
+    Code/Project2  ahead 1
+    Code/Project3  up to date
+    Code/Project4  behind 1
+    Code/GitCat    uncommitted changes in 3 files
+      M README.rst
+      M git-options.ini
+      M gitcat.py
+
+------------
+
+**git cat statu**
+
+usage: git cat status [-h] [-l] [-u CHOICE] [-q] [repositories]
+
+Print the status of all repositories
+
+positional arguments:
+  repositories          optionally filter repositories for status
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l, --local           Only compare with local repositories
+  -u CHOICE, --untracked-files CHOICE
+                        Show untracked files using git status mode (all, no, or normal)
+  -q, --quiet           only print "important" messages
+
+Print a summary of the status of all of the repositories in the
+catalogue. The name is slightly misleading as this command does not
+just run `git status` on each repository and, instead, it queries the
+remote repositories to determine whether each repository is ahead or
+behind the remote repository.
+
+*Example*:
+
+.. code-block:: bash
+
+    > git cat status Code
+    Code/Project1  up to date
+    Code/Project2  ahead 1
+    Code/Project3  up to date
+    Code/Project4  behind 1
+    Code/GitCat    uncommitted changes in 3 files
+      M README.rst
+      M git-options.ini
+      M gitcat.py
+
 
 Author
 ......
 
 Andrew Mathas Mathas
 
-`git cat`_ version 1.0.0
+`git cat`_ version 1.2.0
 
-Copyright (C) 2018-2020
+Copyright (C) 2018-2021
 
 ------------
 
