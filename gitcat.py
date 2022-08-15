@@ -486,6 +486,11 @@ class GitCat:
         # read the catalogue from the rc file
         self.read_catalogue()
 
+        # check for moving and move if need be
+        if options.moveto:
+            self.move(options.moveto)
+            sys.exit()
+
         # run corresponding command - but allow short hands
         command = options.command.replace('-','_')
         bad_command = True
@@ -1412,6 +1417,7 @@ def setup_command_line_parser(settings):
         action='store_true',
         default=settings.quiet,
         help='Print messages only if repository changes')
+
     # parser.add_argument(
     #     '-s',
     #     '--set-as-default',
@@ -1438,6 +1444,15 @@ def setup_command_line_parser(settings):
         action='version',
         version=settings.version(),
         help=argparse.SUPPRESS
+    )
+
+    parser.add_argument(
+        '-m',
+        '--moveto',
+        action='store',
+        default=None,
+        type=int,
+        help='Move repository to specified position in catalogue'
     )
 
     # ---------------------------------------------------------------------------
