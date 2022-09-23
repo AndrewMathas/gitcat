@@ -1729,7 +1729,7 @@ behind the remote repository.
 Author
 ......
 
-Andrew Mathas Mathas
+Andrew Mathas 
 
 `git cat`_ version 1.2.0
 
